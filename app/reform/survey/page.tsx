@@ -8,6 +8,7 @@ import {
 import { useReform, needsInput, valLabel } from "@/context/ReformContext";
 import { useAuth } from "@/context/AuthContext";
 import { createSurveyRequest } from "@/lib/firestore";
+import { notifyAdmin } from "@/lib/notify";
 import { lookupAddress } from "@/lib/zip";
 
 /**
@@ -91,6 +92,16 @@ export default function SurveyRequest() {
         prefs,
         photoCount: photos.length,
         userId: user?.uid ?? null,
+      });
+      notifyAdmin({
+        kind: "見積依頼",
+        title: `${trimmed.name} 様（現地調査 概算 ${summaryNet.toLocaleString("ja-JP")}円）`,
+        lines: [
+          `工事：${summaryItems.join("、")}`,
+          `連絡先：${trimmed.tel}${trimmed.email ? ` / ${trimmed.email}` : ""}`,
+          `住所：${[trimmed.zip && `〒${trimmed.zip}`, trimmed.addr, trimmed.building].filter(Boolean).join(" ")}`,
+          `希望日程：${prefs.map((p) => `${p.date} ${p.time}`).join(" / ") || "指定なし"}`,
+        ],
       });
       clear();
       router.push("/messages");

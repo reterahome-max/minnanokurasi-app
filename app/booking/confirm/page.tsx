@@ -12,6 +12,7 @@ import { getService, optionsFor, calcBill, num } from "@/lib/pricing";
 import { getReformItem, quote } from "@/lib/reformPricing";
 import { fullDateLabel, paymentConfirmLabel } from "@/lib/booking";
 import { createBooking, SlotFullError } from "@/lib/firestore";
+import { notifyAdmin } from "@/lib/notify";
 
 /**
  * RE:TERA HOME — 最終確認（お客様情報入力 → ここ → 完了）
@@ -86,6 +87,17 @@ export default function FinalConfirm() {
           : null,
       });
       set({ bookingNo: newNo });
+      // 管理者へ新着メール通知（補助・失敗しても続行）
+      notifyAdmin({
+        kind: "予約",
+        title: `${isReform ? `リフォーム工事 × ${reformRows.length}件` : `${svc.title} × ${qty}${svc.unitLabel}`}（${newNo}）`,
+        lines: [
+          `日時：${fullDateLabel(year, month, day!, slot!)}`,
+          `お客様：${trimmed.name}／${trimmed.tel}`,
+          `住所：${[trimmed.zip && `〒${trimmed.zip}`, trimmed.addr, trimmed.building].filter(Boolean).join(" ")}`,
+          `金額：${(isReform ? reformIncl : bill.totalIncl).toLocaleString("ja-JP")}円（${isReform ? "税込参考" : "税込"}）／${payment}`,
+        ],
+      });
       router.push("/booking/complete");
     } catch (e) {
       // 失敗時は完了に進まず、理由を表示して再試行できるようにする

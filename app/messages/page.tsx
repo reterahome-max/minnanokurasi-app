@@ -6,6 +6,8 @@ import { ArrowLeft, Phone, Send, Plus, Check } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/context/AuthContext";
+import { useUnread } from "@/context/UnreadContext";
+import { notifyAdmin } from "@/lib/notify";
 import { fetchUserBookings, subscribeThread, sendMessage, type ChatMessage } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
 
@@ -28,6 +30,7 @@ const hm = (ms: number) => {
 function MessagesInner() {
   const router = useRouter();
   const { user, configured } = useAuth();
+  const { markSeen } = useUnread();
   const live = configured && !!user; // Firestore接続モード
   const [local, setLocal] = useState<Msg[]>([]); // 未設定時のデモ用
   const [remote, setRemote] = useState<ChatMessage[]>([]);
@@ -78,12 +81,17 @@ function MessagesInner() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [remote, local]);
 
+  // この画面を開いている間は既読扱い（ボトムナビのバッジをクリア）
+  useEffect(() => { markSeen(); }, [remote]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const send = (t?: string) => {
     const v = (t ?? text).trim();
     if (!v) return;
     setText("");
     if (live && user) {
-      sendMessage({ threadId: user.uid, sender: "user", text: v, userName: user.displayName ?? "お客様" }).catch(() => {});
+      const name = user.displayName ?? "お客様";
+      sendMessage({ threadId: user.uid, sender: "user", text: v, userName: name }).catch(() => {});
+      notifyAdmin({ kind: "メッセージ", title: `${name} さんからメッセージ`, lines: [v] });
       return;
     }
     // 未設定：ローカルデモ

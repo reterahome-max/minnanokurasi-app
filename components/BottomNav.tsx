@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Home, Calculator, Calendar, Mail, User } from "lucide-react";
+import { useUnread } from "@/context/UnreadContext";
 
 /**
  * 共通ボトムナビ。active タブを props で受け取る。
@@ -20,14 +21,19 @@ const NAV: { key: NavKey; icon: typeof Home; label: string; href: string }[] = [
 ];
 
 export default function BottomNav({ active }: { active: NavKey }) {
+  const { unread } = useUnread();
   return (
     <nav className="rt-nav">
       {NAV.map((n) => {
         const Icon = n.icon;
         const on = n.key === active;
+        const badge = n.key === "messages" && unread > 0;
         return (
           <Link key={n.key} href={n.href} className={"rt-nav-btn" + (on ? " rt-nav-on" : "")}>
-            <Icon size={22} strokeWidth={on ? 2.5 : 2.1} />
+            <span className="rt-nav-ico-wrap">
+              <Icon size={22} strokeWidth={on ? 2.5 : 2.1} />
+              {badge && <span className="rt-nav-badge">{unread > 9 ? "9+" : unread}</span>}
+            </span>
             <span>{n.label}</span>
           </Link>
         );

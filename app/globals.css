@@ -201,6 +201,26 @@ body {
 .rt-nav-on {
   color: var(--red);
 }
+.rt-nav-ico-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.rt-nav-badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}
 
 /* ───────── 共通写真（components/Photo.tsx） ───────── */
 .rt-photo {

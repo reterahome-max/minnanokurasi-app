@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { BookingProvider } from "@/context/BookingContext";
 import { ReformProvider } from "@/context/ReformContext";
+import { UnreadProvider } from "@/context/UnreadContext";
 import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = {
@@ -60,9 +61,11 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <AuthProvider>
-          <BookingProvider>
-            <ReformProvider>{children}</ReformProvider>
-          </BookingProvider>
+          <UnreadProvider>
+            <BookingProvider>
+              <ReformProvider>{children}</ReformProvider>
+            </BookingProvider>
+          </UnreadProvider>
         </AuthProvider>
       </body>
     </html>

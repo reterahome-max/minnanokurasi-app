@@ -111,6 +111,24 @@ function AdminInner() {
   const conv = selThread ? msgs.filter((m) => m.threadId === selThread) : [];
   const selName = threads.find((t) => t.threadId === selThread)?.userName || "お客様";
 
+  // 既読管理（threadId → 最終閲覧時刻、localStorage・端末ごと）
+  const [adminSeen, setAdminSeen] = useState<Record<string, number>>({});
+  useEffect(() => {
+    try { const raw = localStorage.getItem("retera_admin_msg_seen"); if (raw) setAdminSeen(JSON.parse(raw)); } catch { /* noop */ }
+  }, []);
+  const markThreadSeen = (threadId: string) => {
+    setAdminSeen((prev) => {
+      const next = { ...prev, [threadId]: Date.now() };
+      try { localStorage.setItem("retera_admin_msg_seen", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
+  const threadUnread = (threadId: string) =>
+    msgs.filter((m) => m.threadId === threadId && m.sender === "user" && m.createdAtMs > (adminSeen[threadId] ?? 0)).length;
+  const unreadThreads = threads.reduce((n, t) => n + (threadUnread(t.threadId) > 0 ? 1 : 0), 0);
+  // 開いているスレッドは既読に（新着が来ても閲覧中なら消す）
+  useEffect(() => { if (selThread) markThreadSeen(selThread); }, [selThread, msgs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const sendReply = () => {
     const v = reply.trim();
     if (!v || !selThread) return;
@@ -158,7 +176,7 @@ function AdminInner() {
                 <div><div className="rt-adm-stat-n">{sv?.length ?? "—"}</div><div className="rt-adm-stat-l">見積依頼</div></div>
               </button>
               <button className={"rt-adm-stat" + (tab === "messages" ? " on" : "")} onClick={() => { setTab("messages"); setSelThread(null); }}>
-                <div className="rt-adm-stat-ico"><MessageSquare size={18} strokeWidth={2.2} /></div>
+                <div className="rt-adm-stat-ico"><MessageSquare size={18} strokeWidth={2.2} />{unreadThreads > 0 && <span className="rt-adm-dot" />}</div>
                 <div><div className="rt-adm-stat-n">{threads.length}</div><div className="rt-adm-stat-l">メッセージ</div></div>
               </button>
             </div>
@@ -172,8 +190,9 @@ function AdminInner() {
                         <div className="rt-adm-th-av">{(t.userName || "客").slice(0, 1)}</div>
                         <div className="rt-adm-th-body">
                           <div className="rt-adm-th-top"><span className="rt-adm-th-name">{t.userName || "お客様"}</span><span className="rt-adm-th-time">{hm(t.lastMs)}</span></div>
-                          <div className="rt-adm-th-last">{t.last}</div>
+                          <div className={"rt-adm-th-last" + (threadUnread(t.threadId) > 0 ? " unread" : "")}>{t.last}</div>
                         </div>
+                        {threadUnread(t.threadId) > 0 && <span className="rt-adm-th-dot">{threadUnread(t.threadId)}</span>}
                       </button>
                     ))}
                   </div>
@@ -297,7 +316,10 @@ const styles = `
 .rt-adm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
 .rt-adm-stat{display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;text-align:center;}
 .rt-adm-stat.on{border-color:var(--red);background:var(--red-soft-2);}
-.rt-adm-stat-ico{flex:none;width:36px;height:36px;border-radius:10px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}
+.rt-adm-stat-ico{position:relative;flex:none;width:36px;height:36px;border-radius:10px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}
+.rt-adm-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px #fff;}
+.rt-adm-th-dot{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;}
+.rt-adm-th-last.unread{color:var(--ink);font-weight:800;}
 .rt-adm-stat-n{font-size:20px;font-weight:900;line-height:1;}
 .rt-adm-stat-l{font-size:11px;font-weight:700;color:var(--ink-2);margin-top:2px;}
 /* メッセージ：スレッド一覧 */
