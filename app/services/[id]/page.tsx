@@ -35,6 +35,9 @@ const BA_MAP: Record<string, { before: string; after: string }> = {
   ac: { before: "ba_ac_before", after: "ba_ac_after" },
   bath: { before: "ba_bath_before", after: "ba_bath_after" },
   washroom: { before: "ba_water_before", after: "ba_water_after" },
+  hood: { before: "ba_hood_before", after: "ba_hood_after" },
+  kitchen: { before: "ba_kitchen_before", after: "ba_kitchen_after" },
+  vacancy: { before: "ba_vacancy_before", after: "ba_vacancy_after" },
 };
 
 export default function ServiceDetail() {

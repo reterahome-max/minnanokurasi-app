@@ -64,6 +64,17 @@ const imgOf = (it: ReformItem) =>
   it.cat === "クロス" ? "cloth" : it.cat === "床" ? "floor" : it.cat === "水回り" ? "toilet"
   : it.cat === "補修" ? "patch" : it.id.startsWith("net") ? "net" : "door";
 
+// 工事アイテム別の実写真ビフォーアフター（未掲載アイテムは欄ごと非表示）
+const REFORM_BA: Record<string, { before: string; after: string }> = {
+  cloth_std:      { before: "ba_cloth_before", after: "ba_cloth_after" },
+  cloth_high:     { before: "ba_cloth_before", after: "ba_cloth_after" },
+  fl_room:        { before: "ba_floor_before", after: "ba_floor_after" },
+  cf_room:        { before: "ba_cf_before",    after: "ba_cf_after" },
+  ft_room:        { before: "ba_ftile_before", after: "ba_ftile_after" },
+  net_window:     { before: "ba_net_before",   after: "ba_net_after" },
+  toilet_toto_qr: { before: "ba_toilet_before", after: "ba_toilet_after" },
+};
+
 export default function ReformDetail() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -152,9 +163,13 @@ export default function ReformDetail() {
           <div className="rt-est-note"><Info size={13} strokeWidth={2.2} />目安金額です。下地の状態などにより変動します。</div>
         </div>
 
-        <div className="rt-sec-h">ビフォーアフター</div>
-        <BeforeAfter beforeKey="ba_before" afterKey="ba_after" alt={it.title} />
-        <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
+        {REFORM_BA[it.id] && (
+          <>
+            <div className="rt-sec-h">ビフォーアフター</div>
+            <BeforeAfter beforeKey={REFORM_BA[it.id].before} afterKey={REFORM_BA[it.id].after} alt={it.title} />
+            <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
+          </>
+        )}
 
         <div className="rt-bottom-grid">
           <div className="rt-merit">
