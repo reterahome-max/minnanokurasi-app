@@ -8,13 +8,13 @@
 
 export const IMAGES: Record<string, string> = {
   hero: "",
-  // 人気・カテゴリ サムネ
-  ac: "",
+  // 人気・カテゴリ サムネ（実写真の「After（仕上がり）」を流用）
+  ac: "/images/ba_ac_after.jpg",
   bath: "",
   hood: "",
   kitchen: "",
   toilet: "",
-  washroom: "",
+  washroom: "/images/ba_water_after.jpg",
   fan: "",
   vacancy: "",
   // リフォーム サムネ
@@ -23,15 +23,15 @@ export const IMAGES: Record<string, string> = {
   door: "",
   net: "",
   patch: "",
-  // ビフォーアフター
-  ba_ac_before: "",
-  ba_ac_after: "",
+  // ビフォーアフター（実写真）
+  ba_ac_before: "/images/ba_ac_before.jpg",
+  ba_ac_after: "/images/ba_ac_after.jpg",
   ba_bath_before: "",
   ba_bath_after: "",
   ba_hood_before: "",
   ba_hood_after: "",
-  ba_water_before: "",
-  ba_water_after: "",
+  ba_water_before: "/images/ba_water_before.jpg",
+  ba_water_after: "/images/ba_water_after.jpg",
   // リフォーム ビフォーアフター
   ba_before: "",
   ba_after: "",
