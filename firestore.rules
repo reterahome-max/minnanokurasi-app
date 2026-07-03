@@ -38,8 +38,14 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // 認証導入まではロック
-    match /users/{id}   { allow read, write: if false; }
+    // ユーザープロフィール：本人のみ読み書き（新規登録時に作成）
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // メッセージは今後
     match /messages/{id} { allow read, write: if false; }
   }
 }
