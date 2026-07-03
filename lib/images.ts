@@ -10,7 +10,7 @@ export const IMAGES: Record<string, string> = {
   hero: "",
   // 人気・カテゴリ サムネ（実写真の「After（仕上がり）」を流用）
   ac: "/images/ba_ac_after.jpg",
-  bath: "",
+  bath: "/images/ba_bath_after.jpg",
   hood: "",
   kitchen: "",
   toilet: "",
@@ -26,8 +26,8 @@ export const IMAGES: Record<string, string> = {
   // ビフォーアフター（実写真）
   ba_ac_before: "/images/ba_ac_before.jpg",
   ba_ac_after: "/images/ba_ac_after.jpg",
-  ba_bath_before: "",
-  ba_bath_after: "",
+  ba_bath_before: "/images/ba_bath_before.jpg",
+  ba_bath_after: "/images/ba_bath_after.jpg",
   ba_hood_before: "",
   ba_hood_after: "",
   ba_water_before: "/images/ba_water_before.jpg",

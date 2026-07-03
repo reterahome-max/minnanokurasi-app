@@ -30,6 +30,12 @@ const MERITS = [
   "カビ・ホコリを徹底除去し、空気がキレイに", "イヤなニオイを解消し、快適な室内環境に",
   "冷暖房効率がUPし、電気代の節約にも", "定期的なお手入れで、エアコンが長持ち",
 ];
+// サービス（svc.img）ごとの実写真ビフォーアフター。未掲載カテゴリは欄ごと非表示。
+const BA_MAP: Record<string, { before: string; after: string }> = {
+  ac: { before: "ba_ac_before", after: "ba_ac_after" },
+  bath: { before: "ba_bath_before", after: "ba_bath_after" },
+  washroom: { before: "ba_water_before", after: "ba_water_after" },
+};
 
 export default function ServiceDetail() {
   const router = useRouter();
@@ -123,9 +129,13 @@ export default function ServiceDetail() {
           <div className="rt-est-note">※機種・汚れ具合により料金が変動する場合があります。</div>
         </div>
 
-        <div className="rt-sec-h">ビフォーアフター</div>
-        <BeforeAfter beforeKey="ba_ac_before" afterKey="ba_ac_after" alt={svc!.title} beforeSuffix=" 作業前" afterSuffix=" 作業後" />
-        <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
+        {BA_MAP[svc!.img] && (
+          <>
+            <div className="rt-sec-h">ビフォーアフター</div>
+            <BeforeAfter beforeKey={BA_MAP[svc!.img].before} afterKey={BA_MAP[svc!.img].after} alt={svc!.title} beforeSuffix=" 作業前" afterSuffix=" 作業後" />
+            <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
+          </>
+        )}
 
         <div className="rt-bottom-grid">
           <div className="rt-merit">
