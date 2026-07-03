@@ -8,6 +8,7 @@ import {
 import { useReform, needsInput, valLabel } from "@/context/ReformContext";
 import { useAuth } from "@/context/AuthContext";
 import { createSurveyRequest } from "@/lib/firestore";
+import { lookupAddress } from "@/lib/zip";
 
 /**
  * RE:TERA HOME — 現地調査 申し込みフォーム
@@ -17,6 +18,7 @@ import { createSurveyRequest } from "@/lib/firestore";
  */
 const emailOk = (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const telOk = (v: string) => { const d = v.replace(/[-\s]/g, ""); return /^0\d{9,10}$/.test(d); };
+const zipOk = (v: string) => !v || /^\d{3}-?\d{4}$/.test(v.replace(/\s/g, ""));
 const num = (n: number) => n.toLocaleString("ja-JP");
 
 // カートが空のときのサンプル表示（デモ用フォールバック）
@@ -48,9 +50,24 @@ export default function SurveyRequest() {
   const nameErr = touched.name && !f.name.trim() ? "お名前を入力してください" : "";
   const telErr = touched.tel && !telOk(f.tel) ? "正しい電話番号を入力してください" : "";
   const emailErr = touched.email && !emailOk(f.email) ? "正しいメールアドレスを入力してください" : "";
+  const zipFmtErr = touched.zip && !zipOk(f.zip) ? "郵便番号は7桁で入力してください（例：343-0845）" : "";
   const addrErr = touched.addr && !f.addr.trim() ? "ご住所を入力してください" : "";
 
-  const ready = Boolean(f.name.trim() && telOk(f.tel) && f.addr.trim() && emailOk(f.email));
+  const ready = Boolean(f.name.trim() && telOk(f.tel) && f.addr.trim() && emailOk(f.email) && zipOk(f.zip));
+
+  // 郵便番号 → 住所検索
+  const [zipSearching, setZipSearching] = useState(false);
+  const [zipErr, setZipErr] = useState("");
+  const searchAddress = async () => {
+    setZipErr("");
+    const d = f.zip.replace(/[-\s]/g, "");
+    if (!/^\d{7}$/.test(d)) { setTouched((t) => ({ ...t, zip: true })); setZipErr("7桁の郵便番号を入力してください"); return; }
+    setZipSearching(true);
+    const addr = await lookupAddress(d);
+    setZipSearching(false);
+    if (addr) setF((p) => ({ ...p, addr }));
+    else setZipErr("住所が見つかりませんでした。直接ご入力ください。");
+  };
 
   const addPhoto = () => setPhotos((p) => (p.length >= 6 ? p : [...p, { id: Date.now() + Math.random(), name: `写真${p.length + 1}` }]));
   const removePhoto = (id: number) => setPhotos((p) => p.filter((x) => x.id !== id));
@@ -58,23 +75,29 @@ export default function SurveyRequest() {
   const setPref = (i: number, k: keyof Pref, v: string) => setPrefs((p) => p.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)));
   const removePref = (i: number) => setPrefs((p) => p.filter((_, idx) => idx !== i));
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const handleSubmit = async () => {
     if (!ready || submitting) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
+      const trimmed = Object.fromEntries(
+        Object.entries(f).map(([k, v]) => [k, v.trim()])
+      ) as typeof f;
       await createSurveyRequest({
         items: summaryItems,
         net: summaryNet,
-        customer: f,
+        customer: trimmed,
         prefs,
         photoCount: photos.length,
         userId: user?.uid ?? null,
       });
       clear();
-    } catch {
-      // 未設定・失敗でもフローは継続
-    } finally {
       router.push("/messages");
+    } catch {
+      // 失敗時は遷移せず、理由を表示して再試行できるようにする
+      setSubmitError("送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。");
+      setSubmitting(false);
     }
   };
 
@@ -103,9 +126,9 @@ export default function SurveyRequest() {
         <div className="rt-block">
           <div className="rt-block-h">ご連絡先</div>
           <div className="rt-fields">
-            <Field label="お名前" req value={f.name} onChange={set("name")} onBlur={blur("name")} err={nameErr} placeholder="山田 花子" />
-            <Field label="電話番号" req type="tel" inputMode="tel" value={f.tel} onChange={set("tel")} onBlur={blur("tel")} err={telErr} placeholder="090-1234-5678" note="調査日程の調整にご連絡します" />
-            <Field label="メールアドレス" type="email" inputMode="email" value={f.email} onChange={set("email")} onBlur={blur("email")} err={emailErr} placeholder="example@email.com" />
+            <Field id="sv-name" maxLength={60} label="お名前" req value={f.name} onChange={set("name")} onBlur={blur("name")} err={nameErr} placeholder="山田 花子" />
+            <Field id="sv-tel" maxLength={20} label="電話番号" req type="tel" inputMode="tel" value={f.tel} onChange={set("tel")} onBlur={blur("tel")} err={telErr} placeholder="090-1234-5678" note="調査日程の調整にご連絡します" />
+            <Field id="sv-email" maxLength={254} label="メールアドレス" type="email" inputMode="email" value={f.email} onChange={set("email")} onBlur={blur("email")} err={emailErr} placeholder="example@email.com" />
           </div>
         </div>
 
@@ -114,14 +137,15 @@ export default function SurveyRequest() {
           <div className="rt-block-h">調査先のご住所</div>
           <div className="rt-fields">
             <div className="rt-field">
-              <label className="rt-field-l">郵便番号</label>
+              <label className="rt-field-l" htmlFor="sv-zip">郵便番号</label>
               <div className="rt-zip-row">
-                <input className="rt-input" inputMode="numeric" value={f.zip} onChange={set("zip")} placeholder="343-0845" />
-                <button className="rt-zip-btn"><Search size={15} strokeWidth={2.4} />住所を検索</button>
+                <input id="sv-zip" maxLength={8} className={"rt-input" + (zipFmtErr || zipErr ? " err" : "")} inputMode="numeric" value={f.zip} onChange={set("zip")} onBlur={blur("zip")} placeholder="343-0845" />
+                <button className="rt-zip-btn" onClick={searchAddress} disabled={zipSearching}><Search size={15} strokeWidth={2.4} />{zipSearching ? "検索中…" : "住所を検索"}</button>
               </div>
+              {zipFmtErr ? <div className="rt-err" role="alert"><AlertCircle size={13} strokeWidth={2.4} />{zipFmtErr}</div> : zipErr ? <div className="rt-err" role="alert"><AlertCircle size={13} strokeWidth={2.4} />{zipErr}</div> : null}
             </div>
-            <Field label="ご住所" req value={f.addr} onChange={set("addr")} onBlur={blur("addr")} err={addrErr} placeholder="埼玉県越谷市南越谷 1-26-12" />
-            <Field label="建物名・部屋番号" value={f.building} onChange={set("building")} placeholder="◯◯マンション 101" />
+            <Field id="sv-addr" maxLength={200} label="ご住所" req value={f.addr} onChange={set("addr")} onBlur={blur("addr")} err={addrErr} placeholder="埼玉県越谷市南越谷 1-26-12" />
+            <Field id="sv-building" maxLength={100} label="建物名・部屋番号" value={f.building} onChange={set("building")} placeholder="◯◯マンション 101" />
           </div>
         </div>
 
@@ -167,9 +191,10 @@ export default function SurveyRequest() {
         {/* 備考 */}
         <div className="rt-block">
           <div className="rt-block-h">ご要望・備考</div>
-          <textarea className="rt-textarea" rows={3} value={f.note} onChange={set("note")} placeholder="気になる点、駐車場の有無、ご希望など" />
+          <textarea className="rt-textarea" rows={3} maxLength={1000} value={f.note} onChange={set("note")} placeholder="気になる点、駐車場の有無、ご希望など" />
         </div>
 
+        {submitError && <div className="rt-form-alert" role="alert"><AlertCircle size={15} strokeWidth={2.4} />{submitError}</div>}
         <div className="rt-hint">送信後、担当より日程調整のご連絡をします。調査・お見積りは無料です。</div>
 
         <div style={{ height: 100 }} />
@@ -177,7 +202,7 @@ export default function SurveyRequest() {
 
       <div className="rt-bottom">
         <div className="rt-bar">
-          <button className={"rt-submit" + (ready ? "" : " off")} disabled={!ready || submitting} onClick={handleSubmit}>現地調査を申し込む<ChevronRight size={18} strokeWidth={2.6} /></button>
+          <button className={"rt-submit" + (ready ? "" : " off")} disabled={!ready || submitting} onClick={handleSubmit}>{submitting ? "送信中…" : "現地調査を申し込む"}<ChevronRight size={18} strokeWidth={2.6} /></button>
         </div>
       </div>
     </div>
@@ -185,8 +210,9 @@ export default function SurveyRequest() {
 }
 
 function Field({
-  label, req, type = "text", inputMode, value, onChange, onBlur, err, placeholder, note,
+  id, label, req, type = "text", inputMode, value, onChange, onBlur, err, placeholder, note, maxLength,
 }: {
+  id: string;
   label: string;
   req?: boolean;
   type?: string;
@@ -197,12 +223,13 @@ function Field({
   err?: string;
   placeholder?: string;
   note?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="rt-field">
-      <label className="rt-field-l">{label}{req && <span className="rt-req">必須</span>}</label>
-      <input className={"rt-input" + (err ? " err" : "")} type={type} inputMode={inputMode} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} />
-      {err ? <div className="rt-err"><AlertCircle size={13} strokeWidth={2.4} />{err}</div> : note ? <div className="rt-field-note">{note}</div> : null}
+      <label className="rt-field-l" htmlFor={id}>{label}{req && <span className="rt-req">必須</span>}</label>
+      <input id={id} className={"rt-input" + (err ? " err" : "")} type={type} inputMode={inputMode} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength} aria-invalid={Boolean(err)} />
+      {err ? <div className="rt-err" role="alert"><AlertCircle size={13} strokeWidth={2.4} />{err}</div> : note ? <div className="rt-field-note">{note}</div> : null}
     </div>
   );
 }
@@ -254,6 +281,8 @@ const styles = `
 .rt-pref-time select{appearance:none;-webkit-appearance:none;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13px;font-weight:700;color:var(--ink);font-family:inherit;cursor:pointer;}
 .rt-pref-del{flex:none;background:none;border:none;color:var(--ink-3);cursor:pointer;padding:4px;}
 .rt-pref-add{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px dashed var(--red);color:var(--red);border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;justify-content:center;}
+.rt-form-alert{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--err);background:#FDF3F2;border:1px solid #F3D3D1;border-radius:11px;padding:12px;margin-bottom:10px;}
+.rt-form-alert svg{flex:none;}
 .rt-hint{font-size:11.5px;color:var(--ink-3);font-weight:600;text-align:center;line-height:1.6;}
 .rt-bar{background:#fff;border-top:1px solid var(--line);padding:11px 14px calc(11px + env(safe-area-inset-bottom));box-shadow:0 -3px 14px rgba(20,28,38,.06);}
 .rt-submit{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:900;cursor:pointer;}

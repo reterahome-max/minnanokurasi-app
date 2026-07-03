@@ -19,9 +19,9 @@ export default function Header({
   const { user } = useAuth();
   return (
     <header className="rt-header">
-      <button className="rt-icon-btn" aria-label="メニュー">
+      <Link href="/menu" className="rt-icon-btn" aria-label="メニュー">
         <Menu size={24} strokeWidth={2.2} />
-      </button>
+      </Link>
       <Link href="/" className="rt-brand" style={{ textDecoration: "none", color: "inherit" }}>
         <div className="rt-brand-mark">
           <Home size={19} strokeWidth={2.6} />

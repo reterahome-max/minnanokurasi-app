@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  ArrowLeft, Check, Calendar, Clock, MapPin, User, Phone, Mail, CreditCard, ChevronRight,
+  ArrowLeft, Check, Calendar, Clock, MapPin, User, Phone, Mail, CreditCard, ChevronRight, AlertCircle,
 } from "lucide-react";
 import { useBooking } from "@/context/BookingContext";
 import { useAuth } from "@/context/AuthContext";
 import { getService, optionsFor, calcBill, num } from "@/lib/pricing";
 import { getReformItem, quote } from "@/lib/reformPricing";
 import { fullDateLabel, paymentConfirmLabel } from "@/lib/booking";
-import { createBooking } from "@/lib/firestore";
+import { createBooking, SlotFullError } from "@/lib/firestore";
 
 /**
  * RE:TERA HOME — 最終確認（お客様情報入力 → ここ → 完了）
@@ -19,10 +20,11 @@ import { createBooking } from "@/lib/firestore";
  */
 export default function FinalConfirm() {
   const router = useRouter();
-  const { serviceId, qty, optionIds, day, slot, customer, payment, hasSchedule, set, reform } = useBooking();
+  const { serviceId, qty, optionIds, year, month, day, slot, customer, payment, hasSchedule, set, reform, bookingNo } = useBooking();
   const { user } = useAuth();
   const [agree, setAgree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // リフォーム予約：金額の出所は lib/reformPricing（税抜）。クリーニングの calcBill とは混ぜない。
   const isReform = reform != null && reform.items.length > 0;
@@ -41,11 +43,13 @@ export default function FinalConfirm() {
   const reformIncl = Math.round(reformNet * 1.1);
   const reformTax = reformIncl - reformNet;
 
-  // ガード：フロー未経由（日時未選択）は /simulator へ
+  // ガード：フロー未経由（日時未選択）は /simulator へ。
+  // 確定済み（bookingNo あり）で戻ってきた場合は完了画面へ（更新→再確定の二重予約防止）。
   useEffect(() => {
-    if (!hasSchedule) router.replace("/simulator");
-  }, [hasSchedule, router]);
-  if (!hasSchedule) return null;
+    if (bookingNo) router.replace("/booking/complete");
+    else if (!hasSchedule) router.replace("/simulator");
+  }, [hasSchedule, bookingNo, router]);
+  if (!hasSchedule || bookingNo) return null;
 
   const svc = getService(serviceId)!;
   const bill = calcBill(serviceId, qty, optionIds);
@@ -58,15 +62,22 @@ export default function FinalConfirm() {
   const handleConfirm = async () => {
     if (!agree || submitting) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
-      const { bookingNo } = await createBooking({
+      // 保存前に前後空白を除去
+      const trimmed = Object.fromEntries(
+        Object.entries(customer).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
+      ) as typeof customer;
+      const { bookingNo: newNo } = await createBooking({
         serviceId: isReform ? "reform" : serviceId,
         qty: isReform ? reformRows.length : qty,
         optionIds: isReform ? [] : optionIds,
+        year,
+        month,
         day: day!,
         slot: slot!,
-        dateLabel: fullDateLabel(day!, slot!),
-        customer,
+        dateLabel: fullDateLabel(year, month, day!, slot!),
+        customer: trimmed,
         payment,
         totalIncl: isReform ? reformIncl : bill.totalIncl,
         userId: user?.uid ?? null,
@@ -74,11 +85,16 @@ export default function FinalConfirm() {
           ? { items: reformRows.map(({ id, val, title, total }) => ({ id, val, title, total })), net: reformNet, incl: reformIncl }
           : null,
       });
-      set({ bookingNo });
-    } catch {
-      // 失敗してもフロー継続（完了画面は番号を決定的生成にフォールバック）
-    } finally {
+      set({ bookingNo: newNo });
       router.push("/booking/complete");
+    } catch (e) {
+      // 失敗時は完了に進まず、理由を表示して再試行できるようにする
+      if (e instanceof SlotFullError) {
+        setSubmitError("申し訳ありません。この時間帯は直前に満員となりました。別の日時をお選びください。");
+      } else {
+        setSubmitError("予約の送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。");
+      }
+      setSubmitting(false);
     }
   };
 
@@ -110,14 +126,14 @@ export default function FinalConfirm() {
             <>
               <div className="rt-svc">リフォーム工事 × {reformRows.length}件</div>
               {reformRows.map((r, i) => <span className="rt-opt" key={i}>{r.title}（{r.detail}）</span>)}
-              <div className="rt-line"><Calendar size={15} strokeWidth={2.2} />{fullDateLabel(day!, slot!)}</div>
+              <div className="rt-line"><Calendar size={15} strokeWidth={2.2} />{fullDateLabel(year, month, day!, slot!)}</div>
               <div className="rt-line"><Clock size={15} strokeWidth={2.2} />作業時間の目安 工事内容により異なります</div>
             </>
           ) : (
             <>
               <div className="rt-svc">{svc.title} × {qty}{svc.unitLabel}</div>
               {chosenOptionNames.map((o, i) => <span className="rt-opt" key={i}>＋{o}</span>)}
-              <div className="rt-line"><Calendar size={15} strokeWidth={2.2} />{fullDateLabel(day!, slot!)}</div>
+              <div className="rt-line"><Calendar size={15} strokeWidth={2.2} />{fullDateLabel(year, month, day!, slot!)}</div>
               <div className="rt-line"><Clock size={15} strokeWidth={2.2} />作業時間の目安 約60〜90分</div>
             </>
           )}
@@ -155,10 +171,14 @@ export default function FinalConfirm() {
         </div>
 
         {/* 同意 */}
-        <button className="rt-agree" onClick={() => setAgree((a) => !a)}>
+        <button className="rt-agree" onClick={() => setAgree((a) => !a)} aria-pressed={agree}>
           <div className={"rt-check" + (agree ? " on" : "")}>{agree && <Check size={14} strokeWidth={3} />}</div>
-          <div className="rt-agree-t"><b>キャンセルポリシー・利用規約</b>に同意します。前日までのご連絡は無料、当日キャンセルは料金が発生する場合があります。</div>
+          <div className="rt-agree-t"><Link href="/legal" className="rt-agree-link" onClick={(e) => e.stopPropagation()}>キャンセルポリシー・利用規約</Link>に同意します。前日までのご連絡は無料、当日キャンセルは料金が発生する場合があります。</div>
         </button>
+
+        {submitError && (
+          <div className="rt-form-alert" role="alert"><AlertCircle size={15} strokeWidth={2.4} />{submitError}</div>
+        )}
 
         <div style={{ height: 108 }} />
       </div>
@@ -166,7 +186,7 @@ export default function FinalConfirm() {
       <div className="rt-bottom">
         <div className="rt-bar">
           <div className="rt-bar-info"><div className="rt-bar-l">お支払い金額（税込）</div><div className="rt-bar-v">{num(isReform ? reformIncl : bill.totalIncl)}円</div></div>
-          <button className={"rt-confirm-btn" + (agree ? "" : " off")} disabled={!agree || submitting} onClick={handleConfirm}>予約を確定する<ChevronRight size={18} strokeWidth={2.6} /></button>
+          <button className={"rt-confirm-btn" + (agree && !submitting ? "" : " off")} disabled={!agree || submitting} onClick={handleConfirm}>{submitting ? "送信中…" : "予約を確定する"}<ChevronRight size={18} strokeWidth={2.6} /></button>
         </div>
       </div>
     </div>
@@ -215,6 +235,9 @@ const styles = `
 .rt-check.on{background:var(--red);border-color:var(--red);}
 .rt-agree-t{font-size:11.5px;color:var(--ink-2);font-weight:600;line-height:1.6;}
 .rt-agree-t b{color:var(--ink);}
+.rt-agree-link{color:var(--red);font-weight:800;text-decoration:underline;}
+.rt-form-alert{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--err);background:#FDF3F2;border:1px solid #F3D3D1;border-radius:11px;padding:12px;margin-top:12px;}
+.rt-form-alert svg{flex:none;}
 .rt-bar{display:flex;align-items:center;gap:11px;background:#fff;border-top:1px solid var(--line);padding:11px 14px calc(11px + env(safe-area-inset-bottom));box-shadow:0 -3px 14px rgba(20,28,38,.06);}
 .rt-bar-info{flex:none;}
 .rt-bar-l{font-size:10px;color:var(--ink-3);font-weight:700;}

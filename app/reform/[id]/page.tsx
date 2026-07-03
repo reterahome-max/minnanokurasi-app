@@ -2,15 +2,16 @@
 
 import { Fragment, useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter, notFound } from "next/navigation";
+import { useRouter, useParams, notFound } from "next/navigation";
 import {
   ArrowLeft, ChevronRight, ChevronLeft,
-  ShieldCheck, Check, Ruler, Minus, Plus, Wrench, Layers, PaintRoller, Sparkles, Star,
+  ShieldCheck, Check, Ruler, Minus, Plus, Wrench, Layers, PaintRoller, Sparkles,
   Calculator, Info,
 } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
+import BeforeAfter from "@/components/BeforeAfter";
 import { useReform, quoteFor, needsInput, defaultVal } from "@/context/ReformContext";
 import { getReformItem, type ReformItem } from "@/lib/reformPricing";
 
@@ -24,37 +25,6 @@ import { getReformItem, type ReformItem } from "@/lib/reformPricing";
 
 const num = (n: number) => n.toLocaleString("ja-JP");
 
-function BeforeAfter({ beforeKey, afterKey, alt }: { beforeKey: string; afterKey: string; alt: string }) {
-  const [pos, setPos] = useState(50);
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const move = useCallback((x: number) => {
-    const el = ref.current; if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos(Math.max(0, Math.min(100, ((x - r.left) / r.width) * 100)));
-  }, []);
-  useEffect(() => {
-    const onMove = (e: MouseEvent | TouchEvent) => { if (!dragging.current) return; move("touches" in e ? e.touches[0].clientX : e.clientX); };
-    const onUp = () => (dragging.current = false);
-    window.addEventListener("mousemove", onMove); window.addEventListener("touchmove", onMove, { passive: true });
-    window.addEventListener("mouseup", onUp); window.addEventListener("touchend", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("touchmove", onMove); window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp); };
-  }, [move]);
-  const start = (e: React.MouseEvent | React.TouchEvent) => { dragging.current = true; move("touches" in e ? e.touches[0].clientX : e.clientX); };
-  return (
-    <div className="rt-cmp" ref={ref}>
-      <div className="rt-cmp-layer"><Photo srcKey={afterKey} alt={alt + " 施工後"} /></div>
-      <div className="rt-cmp-layer" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}><Photo srcKey={beforeKey} alt={alt + " 施工前"} /></div>
-      <span className="rt-cmp-badge rt-cmp-before">Before</span>
-      <span className="rt-cmp-badge rt-cmp-after">After</span>
-      <div className="rt-cmp-handle" style={{ left: `${pos}%` }}>
-        <button className="rt-cmp-knob" onMouseDown={start} onTouchStart={start} aria-label="比較">
-          <ChevronLeft size={14} strokeWidth={3} style={{ marginRight: -3 }} /><ChevronRight size={14} strokeWidth={3} style={{ marginLeft: -3 }} />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // 作業ステップ（クロスは Artifact 準拠、その他は汎用）
 const STEPS_CLOTH = [
@@ -94,10 +64,11 @@ const imgOf = (it: ReformItem) =>
   it.cat === "クロス" ? "cloth" : it.cat === "床" ? "floor" : it.cat === "水回り" ? "toilet"
   : it.cat === "補修" ? "patch" : it.id.startsWith("net") ? "net" : "door";
 
-export default function ReformDetail({ params }: { params: { id: string } }) {
+export default function ReformDetail() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const { addItem } = useReform();
-  const item = getReformItem(params.id);
+  const item = getReformItem(decodeURIComponent(params.id));
   if (!item) notFound();
   const it = item!;
 
@@ -167,9 +138,9 @@ export default function ReformDetail({ params }: { params: { id: string } }) {
               <label className="rt-est-l"><Ruler size={15} strokeWidth={2.2} />{isArea ? "施工面積" : "数量"}</label>
               <div className="rt-est-field">
                 <button className="rt-est-btn" onClick={() => setVal((a) => Math.max(isArea ? 0 : 1, a - 1))}><Minus size={16} strokeWidth={2.4} /></button>
-                <input className="rt-est-num" type="number" min={isArea ? 0 : 1} value={val} onChange={(e) => setVal(Math.max(0, Number(e.target.value)))} />
+                <input className="rt-est-num" type="number" min={isArea ? 0 : 1} value={val} onChange={(e) => setVal(Math.min(500, Math.max(0, Number(e.target.value))))} />
                 <span className="rt-est-unit">{isArea ? "㎡" : it.unitLabel}</span>
-                <button className="rt-est-btn" onClick={() => setVal((a) => a + 1)}><Plus size={16} strokeWidth={2.4} /></button>
+                <button className="rt-est-btn" onClick={() => setVal((a) => Math.min(500, a + 1))}><Plus size={16} strokeWidth={2.4} /></button>
               </div>
             </div>
           )}
@@ -192,8 +163,8 @@ export default function ReformDetail({ params }: { params: { id: string } }) {
           </div>
           <div className="rt-voice">
             <div className="rt-block-h">お客様の声</div>
-            <div className="rt-voice-score"><div className="rt-voice-l">満足度</div><div className="rt-voice-v">4.7</div><div className="rt-voice-stars">{[0,1,2,3,4].map(i=><Star key={i} size={13} fill="currentColor" strokeWidth={0} />)}</div><div className="rt-voice-cnt">（レビュー多数）</div></div>
-            <div className="rt-voice-bubble">部屋が見違えるほど明るくなりました。仕上がりも丁寧で満足です。<div className="rt-voice-who">埼玉県 / 40代男性</div></div>
+            <div className="rt-voice-score"><div className="rt-voice-l">ご利用の声</div><div className="rt-voice-cnt">掲載準備中です</div></div>
+            <div className="rt-voice-bubble">着工前に内容と金額をご説明し、施工後は仕上がりを一緒にご確認いただいています。</div>
           </div>
         </div>
 

@@ -21,9 +21,9 @@ import { getService } from "@/lib/pricing";
  */
 const MENU_MAIN = [
   { icon: CalendarCheck, label: "予約・注文一覧", sub: "予約中 1件・完了 2件", href: "/orders" },
-  { icon: MapPin, label: "登録住所", sub: "埼玉県越谷市南越谷 1-26-12", href: "" },
-  { icon: CreditCard, label: "お支払い方法", sub: "クレジットカード ・ 現金", href: "" },
-  { icon: Gift, label: "ポイント・クーポン", sub: "1,200pt ・ クーポン 2枚", href: "/reorder" },
+  { icon: MapPin, label: "登録住所", sub: "準備中", href: "" },
+  { icon: CreditCard, label: "お支払い方法", sub: "現金・クレジットカード・QR決済に対応", href: "" },
+  { icon: Gift, label: "もう一度予約", sub: "過去のご利用から再予約", href: "/reorder" },
 ];
 const MENU_SUB = [
   { icon: FileText, label: "領収書の発行", href: "" },
@@ -46,10 +46,11 @@ function MyPageInner() {
   // 実データがあれば統計・次回予約を算出。無ければサンプル表示。
   const hasReal = configured && bookings != null;
   const upcoming = (bookings ?? []).filter((b) => b.status !== "completed" && b.status !== "cancelled");
+  const doneCount = (bookings ?? []).filter((b) => b.status === "completed").length;
   const STATS = [
     { label: "予約中", value: hasReal ? String(upcoming.length) : "1" },
     { label: "利用回数", value: hasReal ? String(bookings!.length) : "3" },
-    { label: "ポイント", value: "1,200" },
+    { label: "完了", value: hasReal ? String(doneCount) : "2" },
   ];
   const next = upcoming[0] ?? (bookings ?? [])[0];
   const nextSvc = next
@@ -79,7 +80,7 @@ function MyPageInner() {
             <div className="rt-profile-name">{name} さん</div>
             <div className="rt-profile-rank"><Star size={13} fill="currentColor" strokeWidth={0} />レギュラー会員</div>
           </div>
-          <button className="rt-profile-edit">編集</button>
+          <button className="rt-profile-edit is-disabled" aria-disabled="true">準備中</button>
         </div>
 
         <div className="rt-stats">
@@ -109,14 +110,14 @@ function MyPageInner() {
           {MENU_MAIN.map((m, i) => { const Icon = m.icon; const inner = (
             <>
               <div className="rt-menu-ico"><Icon size={20} strokeWidth={2.1} /></div>
-              <div className="rt-menu-body"><div className="rt-menu-l">{m.label}</div><div className="rt-menu-sub">{m.sub}</div></div>
+              <div className="rt-menu-body"><div className="rt-menu-l">{m.label}</div><div className="rt-menu-sub">{m.href === "/orders" && hasReal ? `予約中 ${upcoming.length}件・完了 ${doneCount}件` : m.sub}</div></div>
               <ChevronRight size={18} strokeWidth={2.4} className="rt-menu-cv" />
             </>
           );
           return m.href ? (
             <Link className="rt-menu-row" key={i} href={m.href}>{inner}</Link>
           ) : (
-            <button className="rt-menu-row" key={i}>{inner}</button>
+            <button className="rt-menu-row is-disabled" key={i} aria-disabled="true">{inner}<span className="rt-soon">準備中</span></button>
           ); })}
         </div>
 
@@ -131,7 +132,7 @@ function MyPageInner() {
           return m.href ? (
             <Link className="rt-menu-row slim" key={i} href={m.href}>{inner}</Link>
           ) : (
-            <button className="rt-menu-row slim" key={i}>{inner}</button>
+            <button className="rt-menu-row slim is-disabled" key={i} aria-disabled="true">{inner}<span className="rt-soon">準備中</span></button>
           ); })}
         </div>
 
@@ -185,6 +186,10 @@ const styles = `
 .rt-menu-cv{color:var(--ink-3);flex:none;}
 .rt-menu-row.slim{padding:13px 14px;}
 .rt-menu-row.slim .rt-menu-l{flex:1;}
+.rt-soon{flex:none;font-size:9.5px;font-weight:800;color:var(--ink-3);background:#EEF0F1;padding:2px 7px;border-radius:5px;}
+.is-disabled{cursor:default;}
+.is-disabled .rt-menu-l,.is-disabled .rt-menu-sub{color:var(--ink-3);}
+.rt-profile-edit.is-disabled{color:var(--ink-3);cursor:default;}
 .rt-logout{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:none;border:none;color:var(--ink-2);font-size:13px;font-weight:800;cursor:pointer;padding:14px;}
 .rt-version{text-align:center;font-size:10.5px;color:var(--ink-3);font-weight:600;margin-top:2px;}
 `;

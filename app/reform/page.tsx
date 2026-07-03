@@ -40,7 +40,10 @@ const ITEMS = [
 
 export default function ReformList() {
   const [filter, setFilter] = useState(0);
-  const list = filter === 0 ? ITEMS : ITEMS.filter((s) => s.cat === FILTERS[filter].label);
+  const [sort, setSort] = useState<"rec" | "price">("rec");
+  const filtered = filter === 0 ? ITEMS : ITEMS.filter((s) => s.cat === FILTERS[filter].label);
+  const priceOf = (x: (typeof ITEMS)[number]) => Number(x.priceLabel.replace(/,/g, ""));
+  const list = sort === "price" ? [...filtered].sort((a, b) => priceOf(a) - priceOf(b)) : filtered;
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -65,7 +68,7 @@ export default function ReformList() {
         </div>
 
         <div className="rt-sort-row">
-          <button className="rt-sort">おすすめ順 <ChevronDown size={15} strokeWidth={2.4} /></button>
+          <button className="rt-sort" onClick={() => setSort((x) => (x === "rec" ? "price" : "rec"))} aria-pressed={sort === "price"}>{sort === "rec" ? "おすすめ順" : "価格が安い順"} <ChevronDown size={15} strokeWidth={2.4} /></button>
           <div className="rt-count">全 <b>{list.length}</b> 件</div>
         </div>
 

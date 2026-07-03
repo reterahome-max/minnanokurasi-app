@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Check, AlertCircle, Banknote, CreditCard, QrCode, Search, ChevronRight,
 } from "lucide-react";
 import { useBooking, type Customer } from "@/context/BookingContext";
+import { useAuth } from "@/context/AuthContext";
+import { fetchUserProfile } from "@/lib/firestore";
+import { lookupAddress } from "@/lib/zip";
 
 /**
  * RE:TERA HOME — お客様情報の入力（バリデーション強化版）
@@ -43,7 +46,24 @@ const RULES: Record<string, (v: string) => string> = {
 export default function CustomerInfoValidated() {
   const router = useRouter();
   const { customer, payment, setCustomer, set } = useBooking();
+  const { user, configured } = useAuth();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // ログイン中は会員プロフィールから未入力欄を自動入力（再入力の手間を削減）
+  useEffect(() => {
+    if (!configured || !user) return;
+    fetchUserProfile(user.uid).then((p) => {
+      if (!p) return;
+      setCustomer({
+        ...(customer.name ? {} : { name: `${p.sei} ${p.mei}`.trim() }),
+        ...(customer.kana ? {} : { kana: `${p.seiKana} ${p.meiKana}`.trim() }),
+        ...(customer.tel ? {} : { tel: p.tel }),
+        ...(customer.email ? {} : { email: p.email }),
+      });
+    });
+    // 初回のみ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configured, user]);
 
   const f = customer;
   const pay = payment;
@@ -63,6 +83,24 @@ export default function CustomerInfoValidated() {
     // 押下時：全必須＋形式対象を touched にしてエラーを可視化
     setTouched((t) => ({ ...t, name: true, tel: true, email: true, zip: true, addr: true }));
     if (allValid) router.push("/booking/confirm");
+  };
+
+  // 郵便番号 → 住所検索
+  const [zipSearching, setZipSearching] = useState(false);
+  const [zipErr, setZipErr] = useState("");
+  const searchAddress = async () => {
+    setZipErr("");
+    const d = f.zip.replace(/[-\s]/g, "");
+    if (!/^\d{7}$/.test(d)) {
+      setTouched((t) => ({ ...t, zip: true }));
+      setZipErr("7桁の郵便番号を入力してください");
+      return;
+    }
+    setZipSearching(true);
+    const addr = await lookupAddress(d);
+    setZipSearching(false);
+    if (addr) setCustomer({ addr });
+    else setZipErr("住所が見つかりませんでした。直接ご入力ください。");
   };
 
   return (
@@ -87,10 +125,10 @@ export default function CustomerInfoValidated() {
         <div className="rt-block">
           <div className="rt-block-h">ご連絡先</div>
           <div className="rt-fields">
-            <Field label="お名前" req value={f.name} onChange={setField("name")} onBlur={blur("name")} err={showErr("name") ? errOf("name") : ""} placeholder="山田 花子" />
-            <Field label="フリガナ" value={f.kana} onChange={setField("kana")} placeholder="ヤマダ ハナコ" />
-            <Field label="電話番号" req type="tel" inputMode="tel" value={f.tel} onChange={setField("tel")} onBlur={blur("tel")} err={showErr("tel") ? errOf("tel") : ""} placeholder="090-1234-5678" note="当日の連絡に使用します" />
-            <Field label="メールアドレス" type="email" inputMode="email" value={f.email} onChange={setField("email")} onBlur={blur("email")} err={showErr("email") ? errOf("email") : ""} placeholder="example@email.com" note="予約確認メールをお送りします" />
+            <Field id="bk-name" maxLength={60} label="お名前" req value={f.name} onChange={setField("name")} onBlur={blur("name")} err={showErr("name") ? errOf("name") : ""} placeholder="山田 花子" />
+            <Field id="bk-kana" maxLength={60} label="フリガナ" value={f.kana} onChange={setField("kana")} placeholder="ヤマダ ハナコ" />
+            <Field id="bk-tel" maxLength={20} label="電話番号" req type="tel" inputMode="tel" value={f.tel} onChange={setField("tel")} onBlur={blur("tel")} err={showErr("tel") ? errOf("tel") : ""} placeholder="090-1234-5678" note="当日の連絡に使用します" />
+            <Field id="bk-email" maxLength={254} label="メールアドレス" type="email" inputMode="email" value={f.email} onChange={setField("email")} onBlur={blur("email")} err={showErr("email") ? errOf("email") : ""} placeholder="example@email.com" note="予約確認メールをお送りします" />
           </div>
         </div>
 
@@ -98,19 +136,19 @@ export default function CustomerInfoValidated() {
           <div className="rt-block-h">訪問先のご住所</div>
           <div className="rt-fields">
             <div className="rt-field">
-              <label className="rt-field-l">郵便番号</label>
+              <label className="rt-field-l" htmlFor="bk-zip">郵便番号</label>
               <div className="rt-zip-row">
-                <input className={"rt-input" + (showErr("zip") ? " err" : "")} inputMode="numeric" value={f.zip} onChange={setField("zip")} onBlur={blur("zip")} placeholder="343-0845" />
-                <button className="rt-zip-btn"><Search size={15} strokeWidth={2.4} />住所を検索</button>
+                <input id="bk-zip" maxLength={8} className={"rt-input" + (showErr("zip") ? " err" : "")} inputMode="numeric" value={f.zip} onChange={setField("zip")} onBlur={blur("zip")} placeholder="343-0845" />
+                <button className="rt-zip-btn" onClick={searchAddress} disabled={zipSearching}><Search size={15} strokeWidth={2.4} />{zipSearching ? "検索中…" : "住所を検索"}</button>
               </div>
-              {showErr("zip") && <Err msg={errOf("zip")} />}
+              {showErr("zip") ? <Err msg={errOf("zip")} /> : zipErr ? <Err msg={zipErr} /> : null}
             </div>
-            <Field label="ご住所" req value={f.addr} onChange={setField("addr")} onBlur={blur("addr")} err={showErr("addr") ? errOf("addr") : ""} placeholder="埼玉県越谷市南越谷 1-26-12" />
-            <Field label="建物名・部屋番号" value={f.building} onChange={setField("building")} placeholder="◯◯マンション 101" />
-            <Field label="当日連絡先（任意）" type="tel" inputMode="tel" value={f.subtel} onChange={setField("subtel")} placeholder="当日つながる番号があれば" />
+            <Field id="bk-addr" maxLength={200} label="ご住所" req value={f.addr} onChange={setField("addr")} onBlur={blur("addr")} err={showErr("addr") ? errOf("addr") : ""} placeholder="埼玉県越谷市南越谷 1-26-12" />
+            <Field id="bk-building" maxLength={100} label="建物名・部屋番号" value={f.building} onChange={setField("building")} placeholder="◯◯マンション 101" />
+            <Field id="bk-subtel" maxLength={20} label="当日連絡先（任意）" type="tel" inputMode="tel" value={f.subtel} onChange={setField("subtel")} placeholder="当日つながる番号があれば" />
             <div className="rt-field">
-              <label className="rt-field-l">ご要望・備考</label>
-              <textarea className="rt-textarea" rows={3} value={f.note} onChange={setField("note")} placeholder="駐車場の有無、エレベーターの有無、当日の連絡事項など" />
+              <label className="rt-field-l" htmlFor="bk-note">ご要望・備考</label>
+              <textarea id="bk-note" className="rt-textarea" rows={3} maxLength={1000} value={f.note} onChange={setField("note")} placeholder="駐車場の有無、エレベーターの有無、当日の連絡事項など" />
             </div>
           </div>
         </div>
@@ -146,8 +184,9 @@ export default function CustomerInfoValidated() {
 }
 
 function Field({
-  label, req, type = "text", inputMode, value, onChange, onBlur, err, placeholder, note,
+  id, label, req, type = "text", inputMode, value, onChange, onBlur, err, placeholder, note, maxLength,
 }: {
+  id: string;
   label: string;
   req?: boolean;
   type?: string;
@@ -158,18 +197,19 @@ function Field({
   err?: string;
   placeholder?: string;
   note?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="rt-field">
-      <label className="rt-field-l">{label}{req && <span className="rt-req">必須</span>}</label>
-      <input className={"rt-input" + (err ? " err" : "")} type={type} inputMode={inputMode} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} />
+      <label className="rt-field-l" htmlFor={id}>{label}{req && <span className="rt-req">必須</span>}</label>
+      <input id={id} className={"rt-input" + (err ? " err" : "")} type={type} inputMode={inputMode} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength} aria-invalid={Boolean(err)} />
       {err ? <Err msg={err} /> : note ? <div className="rt-field-note">{note}</div> : null}
     </div>
   );
 }
 
 function Err({ msg }: { msg: string }) {
-  return <div className="rt-err"><AlertCircle size={13} strokeWidth={2.4} />{msg}</div>;
+  return <div className="rt-err" role="alert"><AlertCircle size={13} strokeWidth={2.4} />{msg}</div>;
 }
 
 const styles = `

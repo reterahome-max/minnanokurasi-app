@@ -5,6 +5,7 @@ import {
   ArrowLeft, Building2, FileText, Users, Percent, ClipboardList, Phone, Check, ChevronRight,
 } from "lucide-react";
 import Photo from "@/components/Photo";
+import { COMPANY } from "@/lib/company";
 
 /**
  * RE:TERA HOME — 法人・管理会社向けプラン（BtoB導線）
@@ -80,7 +81,11 @@ export default function CorporateLanding() {
           <div className="rt-contact-t">まずはお気軽にご相談ください</div>
           <div className="rt-contact-d">物件数・ご希望をお聞かせいただければ、法人プランをお見積りします。</div>
           <Link href="/messages" className="rt-contact-btn"><FileText size={18} strokeWidth={2.2} />法人問い合わせフォーム<ChevronRight size={17} strokeWidth={2.6} className="rt-contact-cv" /></Link>
-          <button className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />電話で相談する</button>
+          {COMPANY.tel ? (
+            <a href={`tel:${COMPANY.tel}`} className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />電話で相談する</a>
+          ) : (
+            <Link href="/messages" className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />メッセージで相談する</Link>
+          )}
         </div>
 
         <div style={{ height: 24 }} />
@@ -124,6 +129,6 @@ const styles = `
 .rt-contact-btn{position:relative;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--red);color:#fff;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;text-decoration:none;}
 .rt-contact-btn:hover{background:var(--red-deep);}
 .rt-contact-cv{position:absolute;right:15px;}
-.rt-contact-tel{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:#fff;border:1.5px solid var(--red);color:var(--red);border-radius:13px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;}
+.rt-contact-tel{text-decoration:none;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:#fff;border:1.5px solid var(--red);color:var(--red);border-radius:13px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;}
 .rt-ph{min-height:208px;background:linear-gradient(150deg,#2A4A54,#15414B);color:#7E98A0;}
 `;

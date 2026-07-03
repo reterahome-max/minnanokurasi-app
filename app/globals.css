@@ -22,7 +22,7 @@
   --err: #D6342C;
   --ink: #1B1B1D;
   --ink-2: #5A5E63;
-  --ink-3: #9AA0A6;
+  --ink-3: #82888E; /* 注釈系。コントラスト確保のため #9AA0A6 から加深 */
   --line: #EBECEE;
   --hero-1: #EAF3F9;
   --hero-2: #DDEDF6;
@@ -32,6 +32,35 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* ───────── アクセシビリティ基盤 ───────── */
+/* キーボード操作時のフォーカスを可視化 */
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* iOS の入力時自動ズームを防ぐため、テキスト入力は16px以上にする
+   （ページ側の 14px 指定より高い詳細度で上書き） */
+input.rt-input,
+textarea.rt-textarea,
+input.rt-zip-input,
+input.rt-faq-input,
+input.rt-est-num {
+  font-size: 16px;
+}
+
+/* 動きを減らす設定のユーザーにはアニメーション・トランジションを止める */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 html,

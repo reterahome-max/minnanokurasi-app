@@ -2,14 +2,15 @@
 
 import { Fragment, useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter, notFound } from "next/navigation";
+import { useRouter, useParams, notFound } from "next/navigation";
 import {
   ArrowLeft, ChevronRight, ChevronLeft,
-  Clock, ShieldCheck, Check, Wrench, Filter, Layers, Fan, Droplets, Star, Calendar,
+  Clock, ShieldCheck, Check, Wrench, Filter, Layers, Fan, Droplets, Calendar,
 } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
+import BeforeAfter from "@/components/BeforeAfter";
 import { useBooking } from "@/context/BookingContext";
 import { getService, optionsFor, num } from "@/lib/pricing";
 
@@ -19,37 +20,6 @@ import { getService, optionsFor, num } from "@/lib/pricing";
  * 「この内容で料金を見る」で選択を BookingContext に保存し /simulator へ。
  */
 
-function BeforeAfter({ beforeKey, afterKey, alt }: { beforeKey: string; afterKey: string; alt: string }) {
-  const [pos, setPos] = useState(50);
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const move = useCallback((x: number) => {
-    const el = ref.current; if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos(Math.max(0, Math.min(100, ((x - r.left) / r.width) * 100)));
-  }, []);
-  useEffect(() => {
-    const onMove = (e: MouseEvent | TouchEvent) => { if (!dragging.current) return; move("touches" in e ? e.touches[0].clientX : e.clientX); };
-    const onUp = () => (dragging.current = false);
-    window.addEventListener("mousemove", onMove); window.addEventListener("touchmove", onMove, { passive: true });
-    window.addEventListener("mouseup", onUp); window.addEventListener("touchend", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("touchmove", onMove); window.removeEventListener("mouseup", onUp); window.removeEventListener("touchend", onUp); };
-  }, [move]);
-  const start = (e: React.MouseEvent | React.TouchEvent) => { dragging.current = true; move("touches" in e ? e.touches[0].clientX : e.clientX); };
-  return (
-    <div className="rt-cmp" ref={ref}>
-      <div className="rt-cmp-layer"><Photo srcKey={afterKey} alt={alt + " 作業後"} /></div>
-      <div className="rt-cmp-layer" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}><Photo srcKey={beforeKey} alt={alt + " 作業前"} /></div>
-      <span className="rt-cmp-badge rt-cmp-before">Before</span>
-      <span className="rt-cmp-badge rt-cmp-after">After</span>
-      <div className="rt-cmp-handle" style={{ left: `${pos}%` }}>
-        <button className="rt-cmp-knob" onMouseDown={start} onTouchStart={start} aria-label="比較">
-          <ChevronLeft size={14} strokeWidth={3} style={{ marginRight: -3 }} /><ChevronRight size={14} strokeWidth={3} style={{ marginLeft: -3 }} />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 const STEPS = [
   { t: "本体カバー\n分解洗浄", icon: Wrench }, { t: "フィルター\n洗浄", icon: Filter },
@@ -61,13 +31,15 @@ const MERITS = [
   "冷暖房効率がUPし、電気代の節約にも", "定期的なお手入れで、エアコンが長持ち",
 ];
 
-export default function ServiceDetail({ params }: { params: { id: string } }) {
+export default function ServiceDetail() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = decodeURIComponent(params.id);
   const { set } = useBooking();
-  const svc = getService(params.id);
+  const svc = getService(id);
   if (!svc) notFound();
 
-  const options = optionsFor(params.id);
+  const options = optionsFor(id);
   const [opt, setOpt] = useState<Record<string, boolean>>({});
   const base = svc!.price;
   const optTotal = options.reduce((s, o) => s + (opt[o.id] ? o.price : 0), 0);
@@ -152,7 +124,7 @@ export default function ServiceDetail({ params }: { params: { id: string } }) {
         </div>
 
         <div className="rt-sec-h">ビフォーアフター</div>
-        <BeforeAfter beforeKey="ba_ac_before" afterKey="ba_ac_after" alt={svc!.title} />
+        <BeforeAfter beforeKey="ba_ac_before" afterKey="ba_ac_after" alt={svc!.title} beforeSuffix=" 作業前" afterSuffix=" 作業後" />
         <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
 
         <div className="rt-bottom-grid">
@@ -162,10 +134,8 @@ export default function ServiceDetail({ params }: { params: { id: string } }) {
           </div>
           <div className="rt-voice">
             <div className="rt-block-h">お客様の声</div>
-            <div className="rt-voice-row">
-              <div className="rt-voice-score"><div className="rt-voice-l">満足度</div><div className="rt-voice-v">4.8</div><div className="rt-voice-stars">{[0,1,2,3,4].map(i=><Star key={i} size={13} fill="currentColor" strokeWidth={0} />)}</div><div className="rt-voice-cnt">（レビュー多数）</div></div>
-              <div className="rt-voice-bubble">とても丁寧で、エアコンの風が全然違います！またお願いしたいです。<div className="rt-voice-who">埼玉県 / 30代女性</div></div>
-            </div>
+            <div className="rt-voice-score"><div className="rt-voice-l">ご利用の声</div><div className="rt-voice-cnt">掲載準備中です</div></div>
+            <div className="rt-voice-bubble">作業完了後、お客様と一緒に仕上がりをご確認いただいています。気になる点はその場でご対応します。</div>
           </div>
         </div>
 

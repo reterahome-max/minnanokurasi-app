@@ -4,23 +4,26 @@
  * コレクション設計：
  *   services      … 価格マスター（lib/pricing の初期データを seed）
  *   availability  … 日付→空き枠。doc id = "YYYY-MM-DD"、{ month, day, remaining, mark }
- *   bookings      … 予約。確認画面の確定で作成し、availability を1減算
- *   users / messages … （STEP6 以降）
+ *   bookings      … 予約。確定時にトランザクションで空き枠を検証・減算して作成
+ *   surveys       … リフォーム現地調査の申し込み
+ *   users         … 会員プロフィール（本人のみ読み書き）
  *
- * Firebase 未設定時はサンプル（lib/booking の AVAIL）へフォールバックし、フローはそのまま動作。
+ * Firebase 未設定時は既定パターン（lib/booking の defaultAvail）へフォールバックし、
+ * フローはそのまま動作（書き込みはスキップ）。
  */
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
-  addDoc,
   runTransaction,
+  addDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import { AVAIL, CAL_YEAR, CAL_MONTH, bookingNumber } from "./booking";
+import { bookingNumber } from "./booking";
 import type { Customer } from "@/context/BookingContext";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,27 +36,30 @@ export const markFromRemaining = (remaining: number) =>
   remaining <= 0 ? "×" : remaining <= 2 ? "△" : "○";
 
 /**
- * 指定月の空き状況（day→mark）を取得。未設定時はサンプル AVAIL を返す。
+ * 指定月の空き状況（day→mark）を取得。
+ * - Firebase 未設定 → null（呼び出し側が既定パターンを使用）
+ * - 設定済みだが未登録月 → null（同上：既定パターンで受付）
+ * - 取得エラー → throw（呼び出し側でエラー表示）
  */
 export async function fetchMonthAvailability(
-  year = CAL_YEAR,
-  month = CAL_MONTH
-): Promise<Record<number, string>> {
+  year: number,
+  month: number
+): Promise<Record<number, string> | null> {
   const db = getDb();
-  if (!db) return AVAIL; // フォールバック
+  if (!db) return null;
 
   const q = query(
     collection(db, "availability"),
     where("month", "==", monthKey(year, month))
   );
   const snap = await getDocs(q);
+  if (snap.empty) return null;
   const result: Record<number, string> = {};
   snap.forEach((d) => {
     const data = d.data() as { day: number; remaining?: number; mark?: string };
-    result[data.day] =
-      data.mark ?? markFromRemaining(data.remaining ?? 0);
+    result[data.day] = data.mark ?? markFromRemaining(data.remaining ?? 0);
   });
-  return Object.keys(result).length ? result : AVAIL;
+  return result;
 }
 
 export interface ReformSummary {
@@ -66,6 +72,8 @@ export interface BookingPayload {
   serviceId: string;
   qty: number;
   optionIds: string[];
+  year: number;
+  month: number;
   day: number;
   slot: number;
   dateLabel: string;
@@ -86,49 +94,57 @@ export interface BookingDoc extends BookingPayload {
   createdAtMs: number;
 }
 
+/** 予約枠が満員のときに投げるエラー */
+export class SlotFullError extends Error {
+  constructor() {
+    super("この時間帯は満員になりました。別の日時をお選びください。");
+    this.name = "SlotFullError";
+  }
+}
+
 /**
- * 予約を1件作成し、対象日の空き枠を1減算する。
+ * 予約を1件作成する。
+ * availability ドキュメントが存在する日は、同一トランザクション内で
+ * 残数を検証（0なら SlotFullError）してから予約を作成し、枠を1減算する。
  * 未設定時は書き込みせず、決定的な予約番号だけを返す（フローは継続）。
  */
 export async function createBooking(
   payload: BookingPayload
 ): Promise<{ id: string; bookingNo: string }> {
-  const bookingNo = bookingNumber(payload.day, payload.slot);
+  const bookingNo = bookingNumber(payload.year, payload.month, payload.day, payload.slot);
   const db = getDb();
   if (!db) return { id: "local-" + bookingNo, bookingNo };
 
-  // 予約ドキュメント作成
-  const ref = await addDoc(collection(db, "bookings"), {
-    ...payload,
-    bookingNo,
-    status: "confirmed",
-    createdAt: serverTimestamp(),
+  const availRef = doc(db, "availability", dateKey(payload.year, payload.month, payload.day));
+  const bookingRef = doc(collection(db, "bookings"));
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(availRef);
+    if (snap.exists()) {
+      const remaining = (snap.data().remaining as number) ?? 0;
+      if (remaining <= 0) throw new SlotFullError();
+      const next = remaining - 1;
+      tx.update(availRef, { remaining: next, mark: markFromRemaining(next) });
+    }
+    // availability 未登録日は既定パターンでの受付（減算対象なし）
+    tx.set(bookingRef, {
+      ...payload,
+      bookingNo,
+      status: "confirmed",
+      createdAt: serverTimestamp(),
+    });
   });
 
-  // 空き枠を1減算（トランザクション）
-  const availRef = doc(db, "availability", dateKey(CAL_YEAR, CAL_MONTH, payload.day));
-  try {
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(availRef);
-      if (!snap.exists()) return;
-      const remaining = Math.max(0, ((snap.data().remaining as number) ?? 0) - 1);
-      tx.update(availRef, { remaining, mark: markFromRemaining(remaining) });
-    });
-  } catch {
-    // 空き枠ドキュメントが無い等は無視（予約自体は作成済み）
-  }
-
-  return { id: ref.id, bookingNo };
+  return { id: bookingRef.id, bookingNo };
 }
 
 /**
  * ログイン中ユーザーの予約一覧を取得（新しい順）。
  * 未設定時は null を返し、画面側はサンプル表示にフォールバックする。
- * where(userId==) のみで取得し、並べ替えはクライアント側（複合インデックス不要）。
  */
 export async function fetchUserBookings(userId: string): Promise<BookingDoc[] | null> {
   const db = getDb();
-  if (!db) return null; // 未設定 → 画面はサンプルへ
+  if (!db) return null;
   const q = query(collection(db, "bookings"), where("userId", "==", userId));
   const snap = await getDocs(q);
   const rows: BookingDoc[] = [];
@@ -145,6 +161,28 @@ export async function fetchUserBookings(userId: string): Promise<BookingDoc[] | 
   });
   rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
   return rows;
+}
+
+/** 会員プロフィール（新規登録時に保存したもの） */
+export interface UserProfile {
+  sei: string;
+  mei: string;
+  seiKana: string;
+  meiKana: string;
+  tel: string;
+  email: string;
+}
+
+/** 本人プロフィールを取得（未設定・未保存なら null） */
+export async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() ? (snap.data() as UserProfile) : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface SurveyRequestPayload {

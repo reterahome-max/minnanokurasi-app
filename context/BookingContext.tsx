@@ -38,6 +38,9 @@ export interface BookingState {
   serviceId: string;
   qty: number;
   optionIds: string[];
+  /** 予約対象の年月（カレンダーで選択。既定は当月） */
+  year: number;
+  month: number;
   day: number | null;
   slot: number | null;
   customer: Customer;
@@ -61,10 +64,13 @@ const emptyCustomer: Customer = {
 };
 
 // 既定値はシミュレーター初期表示（壁掛け・2台）に合わせる
+const now = new Date();
 const defaultState: BookingState = {
   serviceId: "ac_wall",
   qty: 2,
   optionIds: [],
+  year: now.getFullYear(),
+  month: now.getMonth() + 1,
   day: null,
   slot: null,
   customer: emptyCustomer,

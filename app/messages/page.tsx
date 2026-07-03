@@ -4,26 +4,55 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Phone, Send, Plus, Check, CheckCheck } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/context/AuthContext";
+import { fetchUserBookings } from "@/lib/firestore";
+import { getService } from "@/lib/pricing";
 
 /**
  * RE:TERA HOME — メッセージ（スタッフとのチャット）
- * RETERA_Messages.jsx を移植。送信はローカル state のみ（Phase1：人対応想定）。
+ * RETERA_Messages.jsx を移植。送信は Phase1（担当が確認後、メール/電話で返信）。
+ * バナーはログイン中ユーザーの直近予約を表示。入力はセッション内で保持。
  */
 type Msg = { from: "system" | "staff" | "me"; text: string; time: string; read?: boolean };
 
 const INITIAL: Msg[] = [
-  { from: "system", text: "壁掛けエアコンクリーニングのご予約ありがとうございます。担当の佐藤です。", time: "10:02" },
-  { from: "staff", text: "7月3日（木）13:00〜15:00で承りました。当日はよろしくお願いいたします。", time: "10:02", read: true },
-  { from: "me", text: "ありがとうございます。当日は駐車場がないのですが大丈夫でしょうか？", time: "10:15", read: true },
-  { from: "staff", text: "ご安心ください。近隣のコインパーキングを利用します。料金は事前に想定額をご案内しますね。", time: "10:18", read: true },
+  { from: "system", text: "RE:TERA HOME サポートです。ご予約の変更・ご相談など、ご用件をお送りください。担当が確認のうえ、お電話またはメールでご連絡します。", time: "" },
 ];
 const QUICK = ["日程を変更したい", "作業時間の目安は？", "追加オプションを相談", "領収書がほしい"];
+const STORAGE_KEY = "retera_messages";
 
 export default function Messages() {
   const router = useRouter();
+  const { user, configured } = useAuth();
   const [msgs, setMsgs] = useState<Msg[]>(INITIAL);
   const [text, setText] = useState("");
+  const [banner, setBanner] = useState<{ title: string; date: string } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // 送信履歴をセッション内で保持（更新で消えない）
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) setMsgs([...INITIAL, ...JSON.parse(raw)]);
+    } catch { /* noop */ }
+  }, []);
+
+  // ログイン中は直近の予約をバナーに表示
+  useEffect(() => {
+    if (!configured || !user) return;
+    fetchUserBookings(user.uid).then((rows) => {
+      const b = rows?.[0];
+      if (!b) return;
+      const isReform = b.reform != null && b.reform.items.length > 0;
+      const svc = getService(b.serviceId);
+      setBanner({
+        title: isReform
+          ? `リフォーム工事 × ${b.reform!.items.length}件`
+          : `${svc?.title ?? "ご予約"} × ${b.qty}${svc?.unitLabel ?? ""}`,
+        date: `${b.dateLabel} ・ 予約確定`,
+      });
+    }).catch(() => {});
+  }, [configured, user]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
@@ -32,7 +61,11 @@ export default function Messages() {
     if (!v) return;
     const now = new Date();
     const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
-    setMsgs((m) => [...m, { from: "me", text: v, time, read: false }]);
+    setMsgs((m) => {
+      const next = [...m, { from: "me" as const, text: v, time, read: false }];
+      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next.filter((x) => x.from === "me"))); } catch { /* noop */ }
+      return next;
+    });
     setText("");
   };
 
@@ -52,16 +85,17 @@ export default function Messages() {
           <button className="rt-icon-btn"><Phone size={21} strokeWidth={2.2} /></button>
         </header>
 
-        <div className="rt-chat-banner">
-          <div className="rt-chat-banner-bar" />
-          <div>
-            <div className="rt-chat-banner-t">壁掛けエアコンクリーニング × 2台</div>
-            <div className="rt-chat-banner-d">7月3日（木）13:00〜15:00 ・ 予約確定</div>
+        {banner && (
+          <div className="rt-chat-banner">
+            <div className="rt-chat-banner-bar" />
+            <div>
+              <div className="rt-chat-banner-t">{banner.title}</div>
+              <div className="rt-chat-banner-d">{banner.date}</div>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="rt-chat-body">
-          <div className="rt-chat-date">2026年6月29日</div>
           {msgs.map((m, i) => {
             if (m.from === "system") return <div className="rt-chat-sys" key={i}>{m.text}</div>;
             const mine = m.from === "me";
@@ -98,7 +132,7 @@ export default function Messages() {
 }
 
 const styles = `
-.rt-shell{padding:0;display:flex;flex-direction:column;height:100vh;}
+.rt-shell{padding:0;display:flex;flex-direction:column;height:100vh;height:100dvh;}
 .rt-icon-btn{background:none;border:none;color:var(--ink);cursor:pointer;padding:4px;display:flex;flex:none;}
 .rt-chat-header{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--line);}
 .rt-chat-peer{display:flex;align-items:center;gap:9px;flex:1;min-width:0;}

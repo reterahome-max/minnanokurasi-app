@@ -14,15 +14,15 @@ import { fullDateLabel, bookingNumber } from "@/lib/booking";
  */
 export default function BookingComplete() {
   const router = useRouter();
-  const { serviceId, qty, optionIds, day, slot, customer, bookingNo, reform } = useBooking();
+  const { serviceId, qty, optionIds, year, month, day, slot, customer, bookingNo, reform } = useBooking();
 
   const svc = getService(serviceId)!;
   const bill = calcBill(serviceId, qty, optionIds);
-  const dateText = day != null && slot != null ? fullDateLabel(day, slot) : "—";
-  const place = customer.addr || "埼玉県越谷市南越谷 1-26-12";
+  const dateText = day != null && slot != null ? fullDateLabel(year, month, day, slot) : "—";
+  const place = customer.addr || "—";
   const no =
     bookingNo ??
-    (day != null && slot != null ? bookingNumber(day, slot) : "RT-XXXXXXXX-XXXX");
+    (day != null && slot != null ? bookingNumber(year, month, day, slot) : "RT-XXXXXXXX-XXXX");
 
   // リフォーム予約時は工事内容・税込参考額（出所: reformPricing）を表示
   const isReform = reform != null && reform.items.length > 0;
@@ -45,7 +45,7 @@ export default function BookingComplete() {
             <div className="rt-done-circle"><Check size={40} strokeWidth={3} /></div>
           </div>
           <h1 className="rt-done-t">ご予約が完了しました</h1>
-          <p className="rt-done-d">ご予約ありがとうございます。<br />確認のメッセージをお送りしました。</p>
+          <p className="rt-done-d">ご予約ありがとうございます。<br />下記の予約番号をお控えください。</p>
           <div className="rt-done-no">予約番号　<b>{no}</b></div>
         </div>
 

@@ -10,7 +10,7 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
 import AuthGuard from "@/components/AuthGuard";
-import { Loading, Empty, ErrorState } from "@/components/states";
+import { SkeletonList, Empty, ErrorState } from "@/components/states";
 import { useAuth } from "@/context/AuthContext";
 import { fetchUserBookings, type BookingDoc } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
@@ -96,7 +96,7 @@ function OrdersInner() {
         </div>
 
         {configured && loading ? (
-          <Loading label="予約を読み込み中" />
+          <SkeletonList count={3} />
         ) : configured && error ? (
           <ErrorState onRetry={load} />
         ) : source.length === 0 ? (
@@ -122,11 +122,11 @@ function OrdersInner() {
               </div>
               <div className="rt-order-actions">
                 {o.action === "日程変更" ? (
-                  <Link href="/booking/date" className="rt-order-sub-btn"><Calendar size={15} strokeWidth={2.2} />{o.action}</Link>
+                  <Link href="/messages" className="rt-order-sub-btn"><Calendar size={15} strokeWidth={2.2} />{o.action}</Link>
                 ) : (
-                  <button className="rt-order-sub-btn"><FileText size={15} strokeWidth={2.2} />{o.action}</button>
+                  <button className="rt-order-sub-btn is-disabled" aria-disabled="true"><FileText size={15} strokeWidth={2.2} />{o.action}（準備中）</button>
                 )}
-                <Link href="/mypage" className="rt-order-main-btn">詳細を見る<ChevronRight size={15} strokeWidth={2.6} /></Link>
+                <Link href="/messages" className="rt-order-main-btn">相談・変更する<ChevronRight size={15} strokeWidth={2.6} /></Link>
               </div>
             </div>
           ))}
@@ -189,7 +189,8 @@ const styles = `
 .rt-order-price{font-size:22px;font-weight:900;color:var(--red);line-height:1.1;}
 .rt-order-price b{font-size:13px;margin-left:1px;}
 .rt-order-actions{display:flex;gap:9px;margin-top:13px;}
-.rt-order-sub-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-size:13px;font-weight:800;color:var(--ink-2);cursor:pointer;}
+.rt-order-sub-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-size:13px;font-weight:800;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+.rt-order-sub-btn.is-disabled{color:var(--ink-3);cursor:default;}
 .rt-order-main-btn{flex:1.3;display:flex;align-items:center;justify-content:center;gap:4px;background:#fff;border:1.5px solid var(--red);border-radius:11px;padding:12px;font-size:13px;font-weight:800;color:var(--red);cursor:pointer;text-decoration:none;}
 .rt-help{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 14px;margin-top:16px;box-shadow:var(--shadow);}
 .rt-help-ico{flex:none;width:50px;height:50px;border-radius:50%;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}

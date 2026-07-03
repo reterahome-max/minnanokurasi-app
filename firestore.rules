@@ -1,10 +1,65 @@
 rules_version = '2';
 
-// RE:TERA HOME — Firestore セキュリティルール（STEP5 時点）
-// services / availability は公開読み取り。bookings はゲスト作成を許可（連絡先必須）。
-// users / messages は STEP6（認証）で本人限定に拡張する。
+// RE:TERA HOME — Firestore セキュリティルール（強化版）
+// - bookings: 金額をサービス単価の範囲で検証（改ざん耐性）。読み取りは本人のみ。
+// - availability: 「残数を1減らす」更新のみ許可（営業妨害的な書き換えを遮断）。
+// - 全文字列に長さ上限（スパム・肥大化対策）。
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // サービスIDごとの基本単価（lib/pricing.ts と同期させること）
+    function basePrice(s) {
+      return s == 'ac_wall' ? 9900
+        : s == 'ac_auto' ? 16500
+        : s == 'ac_ceiling' ? 18700
+        : s == 'bath' ? 16000
+        : s == 'hood' ? 13000
+        : s == 'kitchen' ? 15000
+        : s == 'toilet' ? 9000
+        : s == 'washroom' ? 9000
+        : s == 'fan' ? 8000
+        : s == 'vacancy' ? 18000
+        : -1;
+    }
+    // オプション最大加算額（防カビ3,000＋室外機6,000＋ドレン2,000）/台
+    function maxOptPerUnit() { return 11000; }
+
+    function strOk(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    function customerOk(c) {
+      return c.name is string && c.name.size() > 0 && c.name.size() <= 60
+        && c.tel is string && c.tel.size() >= 10 && c.tel.size() <= 20
+        && strOk(c.email, 254) && strOk(c.addr, 200) && strOk(c.building, 100)
+        && strOk(c.kana, 60) && strOk(c.zip, 10) && strOk(c.subtel, 20)
+        && strOk(c.note, 1000);
+    }
+
+    // クリーニング予約：合計は「基本×数量 〜 (基本+全オプション)×数量」の範囲のみ許可
+    function cleaningPriceOk(d) {
+      return basePrice(d.serviceId) > 0
+        && d.totalIncl >= basePrice(d.serviceId) * d.qty
+        && d.totalIncl <= (basePrice(d.serviceId) + maxOptPerUnit()) * d.qty;
+    }
+    // リフォーム予約：税抜netと税込incl(=net×1.1丸め±1円)の整合＋上限
+    function reformPriceOk(d) {
+      return d.reform.net is int && d.reform.net > 0 && d.reform.net <= 5000000
+        && d.totalIncl >= d.reform.net && d.totalIncl <= d.reform.net * 11 / 10 + 1
+        && d.reform.items is list && d.reform.items.size() >= 1 && d.reform.items.size() <= 20;
+    }
+
+    function bookingOk(d) {
+      return d.qty is int && d.qty >= 1 && d.qty <= 30
+        && d.year is int && d.year >= 2025 && d.year <= 2100
+        && d.month is int && d.month >= 1 && d.month <= 12
+        && d.day is int && d.day >= 1 && d.day <= 31
+        && d.slot is int && d.slot >= 0 && d.slot <= 4
+        && d.totalIncl is int && d.totalIncl > 0 && d.totalIncl <= 6000000
+        && strOk(d.dateLabel, 50)
+        && customerOk(d.customer)
+        && (d.serviceId == 'reform' ? reformPriceOk(d) : cleaningPriceOk(d));
+    }
 
     // 価格マスター：誰でも読み取り可、書き込みは管理（コンソール / seed）のみ
     match /services/{id} {
@@ -12,36 +67,47 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // 空き枠：誰でも読み取り可。減算は予約作成時に行うため update を許可（数量検証付き）
+    // 空き枠：誰でも読み取り可。更新は「残数を1減らす」操作のみ許可
     match /availability/{id} {
       allow read: if true;
-      allow update: if request.resource.data.remaining >= 0;
+      allow update: if request.resource.data.remaining is int
+                    && request.resource.data.remaining == resource.data.remaining - 1
+                    && request.resource.data.remaining >= 0
+                    && request.resource.data.day == resource.data.day
+                    && request.resource.data.month == resource.data.month
+                    && request.resource.data.mark in ['○', '△', '×'];
       allow create, delete: if false;
     }
 
-    // 予約：ゲスト作成可（氏名・電話必須）。読み取りは本人（userId==uid）のみ。
+    // 予約：ゲスト作成可（内容・金額を検証）。読み取りは本人（userId==uid）のみ。
     match /bookings/{id} {
-      allow create: if request.resource.data.customer.name is string
-                    && request.resource.data.customer.name.size() > 0
-                    && request.resource.data.customer.tel is string
-                    && request.resource.data.customer.tel.size() > 0;
+      allow create: if bookingOk(request.resource.data);
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
 
-    // 現地調査申し込み：ゲスト作成可（氏名・電話必須）
+    // 現地調査申し込み：ゲスト作成可（氏名・電話必須＋長さ上限）
     match /surveys/{id} {
       allow create: if request.resource.data.customer.name is string
                     && request.resource.data.customer.name.size() > 0
+                    && request.resource.data.customer.name.size() <= 60
                     && request.resource.data.customer.tel is string
-                    && request.resource.data.customer.tel.size() > 0;
+                    && request.resource.data.customer.tel.size() >= 10
+                    && request.resource.data.customer.tel.size() <= 20
+                    && request.resource.data.net is int
+                    && request.resource.data.net >= 0
+                    && request.resource.data.net <= 5000000
+                    && request.resource.data.items is list
+                    && request.resource.data.items.size() <= 30;
       allow read, update, delete: if false;
     }
 
-    // ユーザープロフィール：本人のみ読み書き（新規登録時に作成）
+    // ユーザープロフィール：本人のみ読み書き
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.sei is string && request.resource.data.sei.size() <= 30
+                    && request.resource.data.mei is string && request.resource.data.mei.size() <= 30;
       allow delete: if false;
     }
 

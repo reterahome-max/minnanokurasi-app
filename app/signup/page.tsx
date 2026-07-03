@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const telOk = (v: string) => /^0\d{9,10}$/.test(v.replace(/[-\s]/g, ""));
 const pwOk = (v: string) => v.length >= 8 && /[a-zA-Z]/.test(v) && /\d/.test(v);
+const kanaOk = (v: string) => /^[ぁ-んー\s]+$/.test(v.trim());
 
 export default function Signup() {
   const router = useRouter();
@@ -33,13 +34,13 @@ export default function Signup() {
   const err = {
     sei: touched.sei && !f.sei.trim() ? "姓を入力してください" : "",
     mei: touched.mei && !f.mei.trim() ? "名を入力してください" : "",
-    seiKana: touched.seiKana && !f.seiKana.trim() ? "せいを入力してください" : "",
-    meiKana: touched.meiKana && !f.meiKana.trim() ? "めいを入力してください" : "",
+    seiKana: touched.seiKana && !f.seiKana.trim() ? "せいを入力してください" : touched.seiKana && !kanaOk(f.seiKana) ? "ひらがなで入力してください" : "",
+    meiKana: touched.meiKana && !f.meiKana.trim() ? "めいを入力してください" : touched.meiKana && !kanaOk(f.meiKana) ? "ひらがなで入力してください" : "",
     tel: touched.tel && !telOk(f.tel) ? "正しい電話番号を入力してください" : "",
     email: touched.email && !emailOk(f.email) ? "正しいメールアドレスを入力してください" : "",
     pw: touched.pw && !pwOk(f.pw) ? "半角英数字を含む8文字以上で入力してください" : "",
   };
-  const ready = Boolean(f.sei.trim() && f.mei.trim() && f.seiKana.trim() && f.meiKana.trim() && telOk(f.tel) && emailOk(f.email) && pwOk(f.pw));
+  const ready = Boolean(f.sei.trim() && f.mei.trim() && kanaOk(f.seiKana) && kanaOk(f.meiKana) && telOk(f.tel) && emailOk(f.email) && pwOk(f.pw));
 
   const friendlyError = (e: unknown) => {
     const code = (e as { code?: string })?.code ?? "";
@@ -107,11 +108,11 @@ export default function Signup() {
                 <label className="rt-label">お名前 <span className="rt-req">必須</span></label>
                 <div className="rt-row2">
                   <div className="rt-half">
-                    <input className={"rt-input" + (err.sei ? " err" : "")} value={f.sei} onChange={set("sei")} onBlur={blur("sei")} placeholder="姓（例：山田）" />
+                    <input className={"rt-input" + (err.sei ? " err" : "")} maxLength={30} aria-label="姓" value={f.sei} onChange={set("sei")} onBlur={blur("sei")} placeholder="姓（例：山田）" />
                     {err.sei && <Er m={err.sei} />}
                   </div>
                   <div className="rt-half">
-                    <input className={"rt-input" + (err.mei ? " err" : "")} value={f.mei} onChange={set("mei")} onBlur={blur("mei")} placeholder="名（例：太郎）" />
+                    <input className={"rt-input" + (err.mei ? " err" : "")} maxLength={30} aria-label="名" value={f.mei} onChange={set("mei")} onBlur={blur("mei")} placeholder="名（例：太郎）" />
                     {err.mei && <Er m={err.mei} />}
                   </div>
                 </div>
@@ -120,11 +121,11 @@ export default function Signup() {
                 <label className="rt-label">ふりがな <span className="rt-req">必須</span></label>
                 <div className="rt-row2">
                   <div className="rt-half">
-                    <input className={"rt-input" + (err.seiKana ? " err" : "")} value={f.seiKana} onChange={set("seiKana")} onBlur={blur("seiKana")} placeholder="せい（例：やまだ）" />
+                    <input className={"rt-input" + (err.seiKana ? " err" : "")} maxLength={30} aria-label="せい（ふりがな）" value={f.seiKana} onChange={set("seiKana")} onBlur={blur("seiKana")} placeholder="せい（例：やまだ）" />
                     {err.seiKana && <Er m={err.seiKana} />}
                   </div>
                   <div className="rt-half">
-                    <input className={"rt-input" + (err.meiKana ? " err" : "")} value={f.meiKana} onChange={set("meiKana")} onBlur={blur("meiKana")} placeholder="めい（例：たろう）" />
+                    <input className={"rt-input" + (err.meiKana ? " err" : "")} maxLength={30} aria-label="めい（ふりがな）" value={f.meiKana} onChange={set("meiKana")} onBlur={blur("meiKana")} placeholder="めい（例：たろう）" />
                     {err.meiKana && <Er m={err.meiKana} />}
                   </div>
                 </div>
@@ -133,7 +134,7 @@ export default function Signup() {
                 <label className="rt-label">電話番号 <span className="rt-req">必須</span></label>
                 <div className="rt-input-wrap">
                   <Phone size={17} strokeWidth={2} className="rt-in-ico" />
-                  <input className={"rt-input pad" + (err.tel ? " err" : "")} type="tel" inputMode="tel" value={f.tel} onChange={set("tel")} onBlur={blur("tel")} placeholder="例）090-1234-5678" />
+                  <input className={"rt-input pad" + (err.tel ? " err" : "")} type="tel" inputMode="tel" maxLength={20} aria-label="電話番号" value={f.tel} onChange={set("tel")} onBlur={blur("tel")} placeholder="例）090-1234-5678" />
                 </div>
                 {err.tel && <Er m={err.tel} />}
               </div>
@@ -141,7 +142,7 @@ export default function Signup() {
                 <label className="rt-label">メールアドレス <span className="rt-req">必須</span></label>
                 <div className="rt-input-wrap">
                   <Mail size={17} strokeWidth={2} className="rt-in-ico" />
-                  <input className={"rt-input pad" + (err.email ? " err" : "")} type="email" inputMode="email" value={f.email} onChange={set("email")} onBlur={blur("email")} placeholder="例）taro.yamada@example.com" />
+                  <input className={"rt-input pad" + (err.email ? " err" : "")} type="email" inputMode="email" maxLength={254} aria-label="メールアドレス" value={f.email} onChange={set("email")} onBlur={blur("email")} placeholder="例）taro.yamada@example.com" />
                 </div>
                 {err.email && <Er m={err.email} />}
               </div>
@@ -149,14 +150,14 @@ export default function Signup() {
                 <label className="rt-label">パスワード <span className="rt-req">必須</span></label>
                 <div className="rt-input-wrap">
                   <Lock size={17} strokeWidth={2} className="rt-in-ico" />
-                  <input className={"rt-input pad pw" + (err.pw ? " err" : "")} type={showPw ? "text" : "password"} value={f.pw} onChange={set("pw")} onBlur={blur("pw")} placeholder="8文字以上の半角英数字" />
+                  <input className={"rt-input pad pw" + (err.pw ? " err" : "")} type={showPw ? "text" : "password"} maxLength={64} aria-label="パスワード" value={f.pw} onChange={set("pw")} onBlur={blur("pw")} placeholder="8文字以上の半角英数字" />
                   <button className="rt-eye" onClick={() => setShowPw((s) => !s)} aria-label="表示切替">{showPw ? <EyeOff size={17} /> : <Eye size={17} />}</button>
                 </div>
                 {err.pw ? <Er m={err.pw} /> : <div className="rt-ok-note"><Check size={12} strokeWidth={3} />半角英数字を含む8文字以上で入力してください</div>}
               </div>
             </div>
 
-            <p className="rt-agree-txt">「登録する」をタップすることで、<b>利用規約</b>と<b>プライバシーポリシー</b>に同意したものとみなします。</p>
+            <p className="rt-agree-txt">「登録する」をタップすることで、<Link href="/legal" className="rt-agree-a">利用規約</Link>と<Link href="/legal" className="rt-agree-a">プライバシーポリシー</Link>に同意したものとみなします。</p>
 
             {authMsg && <div className={"rt-auth-msg" + (authMsg.type === "err" ? " err" : " info")}><AlertCircle size={14} strokeWidth={2.4} />{authMsg.text}</div>}
 
@@ -208,7 +209,7 @@ export default function Signup() {
   );
 }
 
-function Er({ m }: { m: string }) { return <div className="rt-err"><AlertCircle size={12} strokeWidth={2.4} />{m}</div>; }
+function Er({ m }: { m: string }) { return <div className="rt-err" role="alert"><AlertCircle size={12} strokeWidth={2.4} />{m}</div>; }
 
 const styles = `
 .rt-shell{max-width:480px;margin:0 auto;background:#fff;padding:0 20px 24px;color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
@@ -253,6 +254,7 @@ const styles = `
 .rt-ok-note svg{color:var(--red);flex:none;}
 .rt-agree-txt{font-size:11px;color:var(--ink-2);font-weight:600;line-height:1.7;margin:18px 0;}
 .rt-agree-txt b{color:var(--red);}
+.rt-agree-a{color:var(--red);font-weight:800;text-decoration:underline;}
 .rt-auth-msg{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--err);background:#FDF3F2;border:1px solid #F3D3D1;border-radius:11px;padding:11px 12px;margin:0 0 16px;line-height:1.5;}
 .rt-auth-msg svg{flex:none;}
 .rt-auth-msg.info{color:var(--ink-2);background:var(--red-soft-2);border-color:var(--line);}

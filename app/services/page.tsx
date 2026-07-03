@@ -38,6 +38,7 @@ function ServiceListInner() {
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
   const [filter, setFilter] = useState(() => filterIndexOf(category));
+  const [sort, setSort] = useState<"rank" | "price">("rank");
 
   // URL の category が変わったら初期絞り込みを同期（ホームから再入する場合）
   useEffect(() => {
@@ -45,7 +46,8 @@ function ServiceListInner() {
   }, [category]);
 
   const all = popularList();
-  const list = filter === 0 ? all : all.filter((s) => s.cat === FILTERS[filter].label);
+  const filtered = filter === 0 ? all : all.filter((s) => s.cat === FILTERS[filter].label);
+  const list = sort === "price" ? [...filtered].sort((a, b) => a.price - b.price) : filtered;
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -70,7 +72,7 @@ function ServiceListInner() {
         </div>
 
         <div className="rt-sort-row">
-          <button className="rt-sort">人気順 <ChevronDown size={15} strokeWidth={2.4} /></button>
+          <button className="rt-sort" onClick={() => setSort((x) => (x === "rank" ? "price" : "rank"))} aria-pressed={sort === "price"}>{sort === "rank" ? "人気順" : "価格が安い順"} <ChevronDown size={15} strokeWidth={2.4} /></button>
           <div className="rt-count">全 <b>{list.length}</b> 件</div>
         </div>
 

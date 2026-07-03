@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileText, Shield, Receipt } from "lucide-react";
+import { COMPANY } from "@/lib/company";
 
 /**
  * RE:TERA HOME — 法務ページ（利用規約 / プライバシーポリシー / 特定商取引法表記）
@@ -33,11 +34,11 @@ const PRIVACY = [
   { h: "6. お問い合わせ窓口", b: "個人情報の取扱いに関するお問い合わせは、アプリ内のメッセージまたは下記事業者情報の連絡先までお願いします。" },
 ];
 const TOKUSHOHO = [
-  { k: "販売事業者", v: "【事業者名（屋号・法人名）】" },
-  { k: "運営責任者", v: "【代表者氏名】" },
-  { k: "所在地", v: "【〒・住所】" },
-  { k: "連絡先", v: "【電話番号】 ／ 【メールアドレス】" },
-  { k: "対応エリア", v: "埼玉県越谷市・春日部市 ほか近隣エリア" },
+  { k: "販売事業者", v: COMPANY.legalName },
+  { k: "運営責任者", v: COMPANY.representative },
+  { k: "所在地", v: COMPANY.address },
+  { k: "連絡先", v: [COMPANY.tel, COMPANY.email].filter(Boolean).join(" ／ ") },
+  { k: "対応エリア", v: COMPANY.area },
   { k: "販売価格", v: "各サービスページに税込で表示" },
   { k: "商品代金以外の必要料金", v: "原則なし（駐車場代等が生じる場合は事前にご案内）" },
   { k: "支払い方法", v: "現金、クレジットカード、QR・電子決済" },
@@ -95,7 +96,7 @@ export default function Legal() {
                 <div className="rt-tr" key={i}><div className="rt-th">{r.k}</div><div className="rt-td">{r.v}</div></div>
               ))}
             </div>
-            <div className="rt-warn">※【　】の項目は、開業情報に合わせて必ず差し替えてください。</div>
+            <div className="rt-warn">※【要記入】の項目は、開業情報の確定後に lib/company.ts で差し替えてください。</div>
           </div>
         )}
 

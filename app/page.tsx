@@ -13,7 +13,7 @@ import {
   Check,
   Calendar,
   Crown,
-  Star,
+  ShieldCheck,
   Wind,
   ShowerHead,
   Fan,
@@ -31,7 +31,11 @@ import {
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
-import { getService, calcBill, serviceGroups, groupForService, CATEGORIES as CATS } from "@/lib/pricing";
+import BeforeAfter from "@/components/BeforeAfter";
+import { getService, calcBill, serviceGroups, groupForService, num, CATEGORIES as CATS } from "@/lib/pricing";
+import { fetchMonthAvailability } from "@/lib/firestore";
+import { today, defaultAvail, shortDateLabel } from "@/lib/booking";
+import { COMPANY, isServiceArea } from "@/lib/company";
 
 /**
  * RE:TERA HOME — ホーム画面（ヒーロー〜FAQ〜相談まで／UX順に統合）
@@ -40,75 +44,6 @@ import { getService, calcBill, serviceGroups, groupForService, CATEGORIES as CAT
  */
 
 // ビフォーアフター比較スライダー（つまみを左右にドラッグで切替）
-function BeforeAfterSlider({
-  beforeKey,
-  afterKey,
-  alt,
-}: {
-  beforeKey: string;
-  afterKey: string;
-  alt: string;
-}) {
-  const [pos, setPos] = useState(50);
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-
-  const move = useCallback((clientX: number) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
-  }, []);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent | TouchEvent) => {
-      if (!dragging.current) return;
-      const x = "touches" in e ? e.touches[0].clientX : e.clientX;
-      move(x);
-    };
-    const onUp = () => (dragging.current = false);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("touchmove", onMove, { passive: true });
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("touchend", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("touchend", onUp);
-    };
-  }, [move]);
-
-  const start = (e: React.MouseEvent | React.TouchEvent) => {
-    dragging.current = true;
-    const x = "touches" in e ? e.touches[0].clientX : e.clientX;
-    move(x);
-  };
-
-  return (
-    <div className="rt-cmp" ref={ref}>
-      <div className="rt-cmp-layer">
-        <Photo srcKey={afterKey} alt={alt + " 作業後"} />
-      </div>
-      <div className="rt-cmp-layer" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        <Photo srcKey={beforeKey} alt={alt + " 作業前"} />
-      </div>
-      <span className="rt-cmp-badge rt-ba-before">Before</span>
-      <span className="rt-cmp-badge rt-cmp-badge-r rt-ba-after">After</span>
-      <div className="rt-cmp-handle" style={{ left: `${pos}%` }}>
-        <button
-          className="rt-cmp-knob"
-          onMouseDown={start}
-          onTouchStart={start}
-          aria-label="スライドして比較"
-        >
-          <ChevronLeft size={14} strokeWidth={3} style={{ marginRight: -3 }} />
-          <ChevronRight size={14} strokeWidth={3} style={{ marginLeft: -3 }} />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // カテゴリ名は lib/pricing の cat を単一の正とし、アイコンのみここで対応付け
 const CAT_ICONS: Record<string, typeof Wind> = {
@@ -121,10 +56,11 @@ const CATEGORIES = [
   { label: "リフォーム", icon: Wrench },
 ];
 
+// 価格は lib/pricing を単一データソースに（描画時に getService から取得）
 const POPULAR = [
-  { id: "ac_wall", rank: "人気No.1", color: "var(--red)", title: "エアコンクリーニング（壁掛け）", desc: "カビ・ホコリを徹底洗浄", price: "9,900", img: "ac" },
-  { id: "bath", rank: "人気No.2", color: "#22A24A", title: "浴室クリーニング", desc: "カビ・水アカを徹底除去", price: "16,000", img: "bath" },
-  { id: "hood", rank: "人気No.3", color: "#EE8A00", title: "レンジフードクリーニング", desc: "油汚れをスッキリ除去", price: "13,000", img: "hood" },
+  { id: "ac_wall", rank: "人気No.1", color: "var(--red)", title: "エアコンクリーニング（壁掛け）", desc: "カビ・ホコリを徹底洗浄", img: "ac" },
+  { id: "bath", rank: "人気No.2", color: "#22A24A", title: "浴室クリーニング", desc: "カビ・水アカを徹底除去", img: "bath" },
+  { id: "hood", rank: "人気No.3", color: "#EE8A00", title: "レンジフードクリーニング", desc: "油汚れをスッキリ除去", img: "hood" },
 ];
 
 const BA = [
@@ -175,24 +111,49 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-function Stars() {
-  return (
-    <div className="rt-stars" aria-label="4.5">
-      {[0, 1, 2, 3].map((i) => (
-        <Star key={i} size={11} fill="currentColor" strokeWidth={0} />
-      ))}
-      <span className="rt-star-half">
-        <Star size={11} fill="currentColor" strokeWidth={0} />
-      </span>
-    </div>
-  );
-}
-
 export default function RETERAHome() {
   const router = useRouter();
   const [cat, setCat] = useState(0);
   const [baTab, setBaTab] = useState(0);
   const [faqCat, setFaqCat] = useState(0);
+
+  // 最短空き状況（availability から動的算出。未設定時は既定パターン）
+  const [slotInfo, setSlotInfo] = useState<{ label: string; weekCount: number } | null>(null);
+  useEffect(() => {
+    const t = today();
+    let active = true;
+    fetchMonthAvailability(t.year, t.month)
+      .then((a) => a ?? defaultAvail(t.year, t.month))
+      .catch(() => defaultAvail(t.year, t.month))
+      .then((avail) => {
+        if (!active) return;
+        const days = Object.keys(avail).map(Number).filter((d) => d > t.day).sort((a, b) => a - b);
+        const open = days.filter((d) => avail[d] === "○" || avail[d] === "△");
+        const earliest = open[0];
+        const weekCount = open.filter((d) => d <= t.day + 7).length;
+        setSlotInfo({
+          label: earliest ? shortDateLabel(t.year, t.month, earliest) : "お問い合わせください",
+          weekCount,
+        });
+      });
+    return () => { active = false; };
+  }, []);
+
+  // 対応エリア判定（郵便番号の先頭3桁）
+  const [zip, setZip] = useState("");
+  const [areaMsg, setAreaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const checkArea = () => {
+    const d = zip.replace(/[-\s]/g, "");
+    if (!/^\d{3,7}$/.test(d)) {
+      setAreaMsg({ ok: false, text: "郵便番号を入力してください（例：343-0845）" });
+      return;
+    }
+    setAreaMsg(
+      isServiceArea(d)
+        ? { ok: true, text: "対応エリアです（越谷市・春日部市）。このままご予約いただけます。" }
+        : { ok: false, text: "エリア外の可能性があります。メッセージからお気軽にご相談ください。" }
+    );
+  };
 
   // 簡易シミュレーター（全サービス対応 / type分岐）
   const [simServiceId, setSimServiceId] = useState("ac_wall");
@@ -221,16 +182,30 @@ export default function RETERAHome() {
 
         {/* エリア検索 */}
         <div className="rt-area-row">
-          <button className="rt-area-btn">
+          <button className="rt-area-btn" onClick={checkArea}>
             <MapPin size={16} strokeWidth={2.6} /> 対応エリアを確認する
             <ChevronDown size={16} strokeWidth={2.6} className="rt-area-cv" />
           </button>
           <div className="rt-zip">
             <Search size={16} strokeWidth={2.4} className="rt-zip-ico" />
-            <input className="rt-zip-input" placeholder="郵便番号を入力（例：153-0064）" readOnly />
-            <button className="rt-zip-btn">確認</button>
+            <input
+              className="rt-zip-input"
+              placeholder="郵便番号を入力（例：343-0845）"
+              inputMode="numeric"
+              value={zip}
+              onChange={(e) => { setZip(e.target.value); setAreaMsg(null); }}
+              onKeyDown={(e) => e.key === "Enter" && checkArea()}
+              aria-label="郵便番号"
+            />
+            <button className="rt-zip-btn" onClick={checkArea}>確認</button>
           </div>
         </div>
+        {areaMsg && (
+          <div className={"rt-zip-msg" + (areaMsg.ok ? " ok" : "")} role="status">
+            {areaMsg.ok ? <Check size={13} strokeWidth={3} /> : <MapPin size={13} strokeWidth={2.4} />}
+            {areaMsg.text}
+          </div>
+        )}
 
         {/* ヒーロー */}
         <section className="rt-hero">
@@ -251,8 +226,8 @@ export default function RETERAHome() {
                 <div><div className="rt-trust-t">地域密着対応</div><div className="rt-trust-d">越谷市・春日部市に迅速対応</div></div>
               </div>
               <div className="rt-trust-card">
-                <div className="rt-trust-ico"><Star size={17} strokeWidth={2.6} fill="currentColor" /></div>
-                <div><div className="rt-trust-t">お客様満足度</div><div className="rt-trust-pct">98.7<span>%</span></div><Stars /></div>
+                <div className="rt-trust-ico"><ShieldCheck size={18} strokeWidth={2.6} /></div>
+                <div><div className="rt-trust-t">損害保険加入</div><div className="rt-trust-d">万が一の時も安心の損害保険に加入済み</div></div>
               </div>
             </div>
           </div>
@@ -311,8 +286,8 @@ export default function RETERAHome() {
           <div className="rt-slot-ico"><Calendar size={24} strokeWidth={2.2} /></div>
           <div className="rt-slot-body">
             <div className="rt-slot-t">最短空き状況</div>
-            <div className="rt-slot-big">最短 <b>7/3（木）</b> 訪問可能</div>
-            <div className="rt-slot-sub">今週の空き枠 あと <b>3</b> 枠　<span>※6/2 12:00時点の情報です</span></div>
+            <div className="rt-slot-big">最短 <b>{slotInfo?.label ?? "確認中…"}</b> 訪問可能</div>
+            <div className="rt-slot-sub">今週の空き <b>{slotInfo ? slotInfo.weekCount : "—"}</b> 日　<span>※空き状況は毎日更新されます</span></div>
           </div>
           <Link href="/booking/date" className="rt-slot-btn">空き状況を<br />確認する<ChevronRight size={14} strokeWidth={2.6} /></Link>
         </section>
@@ -354,7 +329,7 @@ export default function RETERAHome() {
                   <div className="rt-card-title">{p.title}</div>
                   <div className="rt-card-desc">{p.desc}</div>
                   <div className="rt-card-foot">
-                    <div className="rt-card-price">{p.price}<span>円〜</span></div>
+                    <div className="rt-card-price">{num(getService(p.id)!.price)}<span>円〜</span></div>
                     <div className="rt-card-go"><ChevronRight size={18} strokeWidth={2.6} /></div>
                   </div>
                 </div>
@@ -382,7 +357,7 @@ export default function RETERAHome() {
               </ul>
             </div>
             <div className="rt-ba-imgs">
-              <BeforeAfterSlider beforeKey={ba.before} afterKey={ba.after} alt={ba.title} />
+              <BeforeAfter beforeKey={ba.before} afterKey={ba.after} alt={ba.title} beforeSuffix=" 作業前" afterSuffix=" 作業後" beforeBadgeClass="rt-ba-before" afterBadgeClass="rt-cmp-badge-r rt-ba-after" />
             </div>
             <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
             <Link href={ba.id ? `/services/${ba.id}` : "/services"} className="rt-ba-link">このサービスを見る <ChevronRight size={15} strokeWidth={2.6} /></Link>
@@ -448,6 +423,18 @@ export default function RETERAHome() {
           <Link href="/messages" className="rt-msg-btn">メッセージを送る<ChevronRight size={15} strokeWidth={2.6} /></Link>
         </section>
 
+        {/* フッター（会社情報・法務への導線） */}
+        <footer className="rt-footer">
+          <div className="rt-footer-links">
+            <Link href="/corporate">法人の方へ</Link>
+            <Link href="/legal">利用規約・プライバシー</Link>
+            <Link href="/legal">特定商取引法に基づく表記</Link>
+            <Link href="/messages">お問い合わせ</Link>
+          </div>
+          <div className="rt-footer-note">{COMPANY.name}｜対応エリア：{COMPANY.area}</div>
+          <div className="rt-footer-copy">© {new Date().getFullYear()} {COMPANY.name}</div>
+        </footer>
+
         <div style={{ height: 132 }} />
       </div>
 
@@ -483,6 +470,10 @@ const styles = `
 .rt-zip-input::placeholder{color:var(--ink-3);}
 .rt-zip-btn{flex:none;height:100%;border:none;background:var(--red);color:#fff;font-size:14px;font-weight:800;padding:0 18px;cursor:pointer;letter-spacing:.08em;}
 .rt-zip-btn:hover{background:var(--red-deep);}
+.rt-zip-msg{display:flex;align-items:flex-start;gap:6px;font-size:12px;font-weight:700;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin:-4px 0 12px;line-height:1.5;}
+.rt-zip-msg svg{flex:none;margin-top:2px;color:var(--ink-3);}
+.rt-zip-msg.ok{color:var(--green);background:var(--green-soft);border-color:var(--green-soft);}
+.rt-zip-msg.ok svg{color:var(--green);}
 
 /* hero */
 .rt-hero{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(120deg,var(--hero-1),var(--hero-2));margin-bottom:14px;box-shadow:var(--shadow);}
@@ -637,6 +628,14 @@ const styles = `
 .rt-msg-t{font-size:14px;font-weight:900;margin-bottom:3px;line-height:1.3;}
 .rt-msg-d{font-size:11px;color:var(--ink-2);font-weight:600;line-height:1.5;}
 .rt-msg-btn{flex:none;display:flex;align-items:center;gap:2px;background:#fff;border:1.5px solid var(--red);color:var(--red);font-size:12px;font-weight:800;border-radius:10px;padding:10px 12px;cursor:pointer;text-decoration:none;}
+
+/* footer */
+.rt-footer{padding:22px 2px 8px;border-top:1px solid var(--line);margin-top:22px;}
+.rt-footer-links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:12px;}
+.rt-footer-links a{font-size:12px;font-weight:700;color:var(--ink-2);text-decoration:none;}
+.rt-footer-links a:hover{color:var(--red);}
+.rt-footer-note{font-size:11px;color:var(--ink-3);font-weight:600;line-height:1.6;margin-bottom:6px;}
+.rt-footer-copy{font-size:10.5px;color:var(--ink-3);font-weight:600;}
 
 /* bottom booking bar */
 .rt-book{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;border:none;padding:15px 14px;font-size:15px;cursor:pointer;box-shadow:0 -3px 14px rgba(20,28,38,.08);text-decoration:none;}

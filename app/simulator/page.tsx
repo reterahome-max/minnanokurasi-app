@@ -174,7 +174,7 @@ function SimulatorInner() {
       </div>
 
       <div className="rt-bottom">
-        <button className="rt-cta-bar" onClick={() => { set({ reform: null }); router.push("/booking/date"); }}>この内容で日時を選ぶ<ChevronRight size={20} strokeWidth={2.6} /></button>
+        <button className="rt-cta-bar" onClick={() => { set({ reform: null, bookingNo: null, day: null, slot: null }); router.push("/booking/date"); }}>この内容で日時を選ぶ<ChevronRight size={20} strokeWidth={2.6} /></button>
         <BottomNav active="simulator" />
       </div>
     </div>

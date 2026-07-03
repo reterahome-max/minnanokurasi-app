@@ -82,7 +82,7 @@ export function ReformProvider({ children }: { children: ReactNode }) {
   );
   const setVal = useCallback(
     (uid: number, val: number) =>
-      setCart((c) => c.map((x) => (x.uid === uid ? { ...x, val: Math.max(0, val) } : x))),
+      setCart((c) => c.map((x) => (x.uid === uid ? { ...x, val: Math.min(500, Math.max(0, val)) } : x))),
     []
   );
   const clear = useCallback(() => setCart([]), []);

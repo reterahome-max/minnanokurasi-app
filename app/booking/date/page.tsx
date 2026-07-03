@@ -1,52 +1,85 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronRight, ChevronLeft, Clock, MapPin,
 } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
+import { Loading, ErrorState } from "@/components/states";
 import { useBooking } from "@/context/BookingContext";
+import { useAuth } from "@/context/AuthContext";
 import { getService, calcBill, num } from "@/lib/pricing";
 import { fetchMonthAvailability } from "@/lib/firestore";
 import {
-  WEEK, SLOTS, AVAIL, CAL_FIRST_WEEKDAY, CAL_DAYS_IN_MONTH, CAL_MONTH_LABEL,
-  shortDateLabel,
+  WEEK, SLOTS, today, monthLabel, firstWeekdayOf, daysInMonthOf,
+  addMonths, isBeforeMonth, defaultAvail, shortDateLabel,
+  BOOKING_HORIZON_MONTHS,
 } from "@/lib/booking";
 
 /**
  * RE:TERA HOME — 日時選択（STEP3 → 予約確定の手前）
- * RETERA_DateSelect.jsx を移植。空き枠はサンプル（lib/booking）。選択は BookingContext に保持。
+ * カレンダーは今日を基準に動的生成。月送り対応・過去日/当日は選択不可。
+ * 空き状況は Firestore availability（未登録月は既定パターンで受付）。
  */
 export default function DateSelect() {
   const router = useRouter();
-  const { serviceId, qty, optionIds, day, slot, set, reform } = useBooking();
+  const { serviceId, qty, optionIds, year, month, day, slot, set, reform } = useBooking();
+  const { configured } = useAuth();
 
   const svc = getService(serviceId)!;
   const bill = calcBill(serviceId, qty, optionIds);
 
   // リフォーム予約（reformPricing・税抜）とクリーニング（pricing・税込）でサマリーを出し分け
   const isReform = reform != null && reform.items.length > 0;
-  const reformTitle = isReform
-    ? `リフォーム工事 × ${reform!.items.length}件`
-    : "";
+  const reformTitle = isReform ? `リフォーム工事 × ${reform!.items.length}件` : "";
 
-  // 空き状況（Firestore→未設定時はサンプル AVAIL）
-  const [avail, setAvail] = useState<Record<number, string>>(AVAIL);
-  useEffect(() => {
+  // 表示中の月（今月〜+2ヶ月の範囲で送り）
+  const t = today();
+  const [view, setView] = useState(() =>
+    isBeforeMonth(year, month, t.year, t.month) ? { year: t.year, month: t.month } : { year, month }
+  );
+  const minMonth = { year: t.year, month: t.month };
+  const maxMonth = addMonths(t.year, t.month, BOOKING_HORIZON_MONTHS);
+  const canPrev = isBeforeMonth(minMonth.year, minMonth.month, view.year, view.month);
+  const canNext = isBeforeMonth(view.year, view.month, maxMonth.year, maxMonth.month);
+
+  // 空き状況（Firestore → 未登録月/未設定は既定パターン）
+  const [avail, setAvail] = useState<Record<number, string> | null>(null);
+  const [availState, setAvailState] = useState<"loading" | "ok" | "error">("loading");
+  const load = useCallback(() => {
     let active = true;
-    fetchMonthAvailability()
-      .then((a) => { if (active) setAvail(a); })
-      .catch(() => { /* フォールバック維持 */ });
+    setAvailState("loading");
+    fetchMonthAvailability(view.year, view.month)
+      .then((a) => {
+        if (!active) return;
+        setAvail(a ?? defaultAvail(view.year, view.month));
+        setAvailState("ok");
+      })
+      .catch(() => {
+        if (!active) return;
+        if (configured) setAvailState("error");
+        else { setAvail(defaultAvail(view.year, view.month)); setAvailState("ok"); }
+      });
     return () => { active = false; };
-  }, []);
+  }, [view.year, view.month, configured]);
+  useEffect(load, [load]);
+
+  const moveMonth = (n: number) => {
+    const next = addMonths(view.year, view.month, n);
+    setView(next);
+    set({ day: null, slot: null });
+  };
 
   // カレンダー生成
+  const firstWeekday = firstWeekdayOf(view.year, view.month);
+  const daysInMonth = daysInMonthOf(view.year, view.month);
   const cells: (number | null)[] = [];
-  for (let i = 0; i < CAL_FIRST_WEEKDAY; i++) cells.push(null);
-  for (let d = 1; d <= CAL_DAYS_IN_MONTH; d++) cells.push(d);
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  const daySelected = day != null && year === view.year && month === view.month ? day : null;
   const canConfirm = day != null && slot != null;
 
   return (
@@ -65,7 +98,7 @@ export default function DateSelect() {
         </div>
 
         <div className="rt-title-row">
-          <button className="rt-back" onClick={() => router.push(isReform ? "/reform/simulator" : "/simulator")}><ArrowLeft size={20} strokeWidth={2.4} /></button>
+          <button className="rt-back" onClick={() => router.push(isReform ? "/reform/simulator" : "/simulator")} aria-label="戻る"><ArrowLeft size={20} strokeWidth={2.4} /></button>
           <h1 className="rt-page-title">日時を選ぶ</h1>
         </div>
 
@@ -80,47 +113,59 @@ export default function DateSelect() {
 
         {/* カレンダー */}
         <div className="rt-cal-head">
-          <button className="rt-cal-nav"><ChevronLeft size={20} strokeWidth={2.4} /></button>
-          <div className="rt-cal-month">{CAL_MONTH_LABEL}</div>
-          <button className="rt-cal-nav"><ChevronRight size={20} strokeWidth={2.4} /></button>
+          <button className="rt-cal-nav" onClick={() => moveMonth(-1)} disabled={!canPrev} aria-label="前の月"><ChevronLeft size={20} strokeWidth={2.4} /></button>
+          <div className="rt-cal-month">{monthLabel(view.year, view.month)}</div>
+          <button className="rt-cal-nav" onClick={() => moveMonth(1)} disabled={!canNext} aria-label="次の月"><ChevronRight size={20} strokeWidth={2.4} /></button>
         </div>
         <div className="rt-legend">
           <span><b className="lg-o">○</b>空きあり</span>
           <span><b className="lg-t">△</b>残りわずか</span>
           <span><b className="lg-x">×</b>満員</span>
         </div>
+
+        {availState === "loading" ? (
+          <Loading label="空き状況を読み込み中" />
+        ) : availState === "error" ? (
+          <ErrorState onRetry={load} />
+        ) : (
         <div className="rt-cal">
           {WEEK.map((w, i) => (
             <div key={"w" + i} className={"rt-cal-w" + (i === 0 ? " sun" : i === 6 ? " sat" : "")}>{w}</div>
           ))}
           {cells.map((d, i) => {
             if (!d) return <div key={"e" + i} className="rt-cal-cell empty" />;
-            const a = avail[d];
+            const a = avail?.[d];
             const dow = i % 7;
             const disabled = !a || a === "×";
-            const on = day === d;
+            const on = daySelected === d;
             return (
-              <button key={d} className={"rt-cal-cell" + (on ? " on" : "") + (disabled ? " disabled" : "")} onClick={() => { if (!disabled) set({ day: d, slot: null }); }} disabled={disabled}>
+              <button
+                key={d}
+                className={"rt-cal-cell" + (on ? " on" : "") + (disabled ? " disabled" : "")}
+                onClick={() => { if (!disabled) set({ year: view.year, month: view.month, day: d, slot: null }); }}
+                disabled={disabled}
+                aria-label={`${view.month}月${d}日${a ? `（${a === "○" ? "空きあり" : a === "△" ? "残りわずか" : "満員"}）` : "（受付外）"}`}
+              >
                 <span className={"rt-cal-d" + (dow === 0 ? " sun" : dow === 6 ? " sat" : "")}>{d}</span>
                 {a && <span className={"rt-cal-mark mk-" + (a === "○" ? "o" : a === "△" ? "t" : "x")}>{a}</span>}
               </button>
             );
           })}
         </div>
+        )}
 
         {/* 時間帯 */}
         <div className="rt-slot-h">
           <span className="rt-slot-title">時間帯を選ぶ</span>
-          {day != null ? <span className="rt-slot-day">{shortDateLabel(day)}</span> : <span className="rt-slot-hint">先に日付を選んでください</span>}
+          {daySelected != null ? <span className="rt-slot-day">{shortDateLabel(view.year, view.month, daySelected)}</span> : <span className="rt-slot-hint">先に日付を選んでください</span>}
         </div>
         <div className="rt-slots">
           {SLOTS.map((s, i) => {
-            const slotDisabled = day == null || (day != null && i === 2 && avail[day] === "△"); // △の日は一部満
-            const on = slot === i;
+            const slotDisabled = daySelected == null;
+            const on = slot === i && daySelected != null;
             return (
-              <button key={i} className={"rt-slot-btn" + (on ? " on" : "") + (slotDisabled ? " disabled" : "")} onClick={() => { if (!slotDisabled) set({ slot: i }); }} disabled={slotDisabled}>
+              <button key={i} className={"rt-slot-btn" + (on ? " on" : "") + (slotDisabled ? " disabled" : "")} onClick={() => { if (!slotDisabled) set({ slot: i }); }} disabled={slotDisabled} aria-pressed={on}>
                 <Clock size={15} strokeWidth={2.2} />{s}
-                {slotDisabled && day != null && <span className="rt-slot-full">満</span>}
               </button>
             );
           })}
@@ -136,12 +181,12 @@ export default function DateSelect() {
         <div className="rt-confirm-bar">
           <div className="rt-confirm-info">
             {canConfirm ? (
-              <><div className="rt-confirm-l">選択中の日時</div><div className="rt-confirm-v">{shortDateLabel(day!)}{SLOTS[slot!]}</div></>
+              <><div className="rt-confirm-l">選択中の日時</div><div className="rt-confirm-v">{shortDateLabel(year, month, day!)}{SLOTS[slot!]}</div></>
             ) : (
               <div className="rt-confirm-hint">日付と時間帯を選んでください</div>
             )}
           </div>
-          <button className={"rt-confirm-btn" + (canConfirm ? "" : " off")} disabled={!canConfirm} onClick={() => router.push("/booking/info")}>予約を確定する<ChevronRight size={18} strokeWidth={2.6} /></button>
+          <button className={"rt-confirm-btn" + (canConfirm ? "" : " off")} disabled={!canConfirm} onClick={() => { set({ bookingNo: null }); router.push("/booking/info"); }}>この日時で進む<ChevronRight size={18} strokeWidth={2.6} /></button>
         </div>
         <BottomNav active="simulator" />
       </div>
@@ -169,6 +214,7 @@ const styles = `
 .rt-summary-p b{font-size:13px;margin-left:1px;}
 .rt-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .rt-cal-nav{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink-2);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.rt-cal-nav:disabled{opacity:.35;cursor:default;}
 .rt-cal-month{font-size:17px;font-weight:900;}
 .rt-legend{display:flex;justify-content:center;gap:16px;margin-bottom:12px;font-size:11px;font-weight:700;color:var(--ink-2);}
 .rt-legend b{margin-right:3px;font-size:13px;}
@@ -196,7 +242,6 @@ const styles = `
 .rt-slot-btn.on svg{color:var(--red);}
 .rt-slot-btn.disabled{color:var(--ink-3);cursor:not-allowed;background:#F4F5F6;}
 .rt-slot-btn.disabled svg{color:var(--ink-3);}
-.rt-slot-full{position:absolute;top:6px;right:8px;font-size:10px;font-weight:800;color:var(--ink-3);}
 .rt-note{display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--ink-2);font-weight:600;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px;}
 .rt-note svg{color:var(--red);flex:none;margin-top:1px;}
 .rt-confirm-bar{display:flex;align-items:center;gap:11px;background:#fff;border-top:1px solid var(--line);padding:11px 14px;box-shadow:0 -3px 14px rgba(20,28,38,.06);}
