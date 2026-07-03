@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronRight, Sparkles, Wrench, Calculator, CalendarCheck,
-  Mail, User, Building2, FileText, Bell, LogIn,
+  Mail, User, Building2, FileText, Bell, LogIn, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { isAdminEmail } from "@/lib/admin";
 
 /**
  * RE:TERA HOME — メニュー（ヘッダーのハンバーガーから）
@@ -65,6 +66,16 @@ export default function Menu() {
             <ChevronRight size={18} strokeWidth={2.4} className="rt-menu-cv" />
           </Link>
         </div>
+
+        {isAdminEmail(user?.email) && (
+          <div className="rt-menu">
+            <Link className="rt-menu-row slim" href="/admin">
+              <div className="rt-menu-ico slim"><ShieldCheck size={18} strokeWidth={2.1} /></div>
+              <div className="rt-menu-l">管理ダッシュボード</div>
+              <ChevronRight size={18} strokeWidth={2.4} className="rt-menu-cv" />
+            </Link>
+          </div>
+        )}
 
         <div style={{ height: 24 }} />
       </div>

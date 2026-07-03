@@ -28,6 +28,12 @@ service cloud.firestore {
       return v is string && v.size() <= max;
     }
 
+    // 管理者：登録メールのアカウントのみ。lib/admin.ts の ADMIN_EMAILS と同期させること。
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'reterahome@gmail.com';
+    }
+
     function customerOk(c) {
       return c.name is string && c.name.size() > 0 && c.name.size() <= 60
         && c.tel is string && c.tel.size() >= 10 && c.tel.size() <= 20
@@ -82,7 +88,7 @@ service cloud.firestore {
     // 予約：ゲスト作成可（内容・金額を検証）。読み取りは本人（userId==uid）のみ。
     match /bookings/{id} {
       allow create: if bookingOk(request.resource.data);
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
       allow update, delete: if false;
     }
 
@@ -99,12 +105,13 @@ service cloud.firestore {
                     && request.resource.data.net <= 5000000
                     && request.resource.data.items is list
                     && request.resource.data.items.size() <= 30;
-      allow read, update, delete: if false;
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
 
     // ユーザープロフィール：本人のみ読み書き
     match /users/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       allow create, update: if request.auth != null && request.auth.uid == uid
                     && request.resource.data.sei is string && request.resource.data.sei.size() <= 30
                     && request.resource.data.mei is string && request.resource.data.mei.size() <= 30;

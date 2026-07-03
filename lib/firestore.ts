@@ -163,6 +163,59 @@ export async function fetchUserBookings(userId: string): Promise<BookingDoc[] | 
   return rows;
 }
 
+/**
+ * 【管理者用】全予約を取得（新しい順）。読み取り可否は firestore.rules の isAdmin() が判定。
+ * 未設定時は null（画面側はサンプル/空表示にフォールバック）。
+ */
+export async function fetchAllBookings(): Promise<BookingDoc[] | null> {
+  const db = getDb();
+  if (!db) return null;
+  const snap = await getDocs(collection(db, "bookings"));
+  const rows: BookingDoc[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const ts = data.createdAt as { toMillis?: () => number } | undefined;
+    rows.push({
+      id: d.id,
+      ...(data as unknown as BookingPayload),
+      bookingNo: (data.bookingNo as string) ?? "",
+      status: (data.status as string) ?? "confirmed",
+      createdAtMs: ts?.toMillis?.() ?? 0,
+    });
+  });
+  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return rows;
+}
+
+/** Firestore の surveys ドキュメント（読み取り用） */
+export interface SurveyDoc extends SurveyRequestPayload {
+  id: string;
+  status: string;
+  createdAtMs: number;
+}
+
+/**
+ * 【管理者用】全見積依頼（現地調査）を取得（新しい順）。読み取り可否は firestore.rules の isAdmin() が判定。
+ */
+export async function fetchAllSurveys(): Promise<SurveyDoc[] | null> {
+  const db = getDb();
+  if (!db) return null;
+  const snap = await getDocs(collection(db, "surveys"));
+  const rows: SurveyDoc[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const ts = data.createdAt as { toMillis?: () => number } | undefined;
+    rows.push({
+      id: d.id,
+      ...(data as unknown as SurveyRequestPayload),
+      status: (data.status as string) ?? "requested",
+      createdAtMs: ts?.toMillis?.() ?? 0,
+    });
+  });
+  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return rows;
+}
+
 /** 会員プロフィール（新規登録時に保存したもの） */
 export interface UserProfile {
   sei: string;
