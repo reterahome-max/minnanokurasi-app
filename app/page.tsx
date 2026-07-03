@@ -216,6 +216,11 @@ export default function RETERAHome() {
             <div className="rt-hero-ribbon">＼ 多くのお客様にご満足いただいています ／</div>
             <h1 className="rt-hero-h1">プロの技術で<br /><span className="rt-hero-red">快適</span>な暮らしを。</h1>
             <p className="rt-hero-sub">エアコン・水回りなどのハウスクリーニングは<br />RE:TERA HOMEにおまかせください。</p>
+            <div className="rt-hero-cats">
+              <span className="rt-hero-cat"><i style={{ background: "var(--blue)" }} />エアコン</span>
+              <span className="rt-hero-cat"><i style={{ background: "var(--green)" }} />ハウスクリーニング</span>
+              <span className="rt-hero-cat"><i style={{ background: "var(--gold)" }} />リフォーム</span>
+            </div>
             <div className="rt-trust">
               <div className="rt-trust-card">
                 <div className="rt-trust-ico">¥</div>
@@ -477,12 +482,17 @@ const styles = `
 
 /* hero */
 .rt-hero{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(120deg,var(--hero-1),var(--hero-2));margin-bottom:14px;box-shadow:var(--shadow);}
-.rt-hero-photo{position:absolute;top:0;right:0;width:50%;height:62%;z-index:1;}
+.rt-hero-photo{position:absolute;top:0;right:0;width:52%;height:100%;z-index:1;}
+.rt-hero-photo::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(100deg,var(--hero-1) 2%,rgba(255,255,255,0) 42%);pointer-events:none;}
+.rt-hero-photo .rt-photo{object-position:62% 16%;}
 .rt-hero-inner{position:relative;z-index:2;padding:18px 16px 16px;}
 .rt-hero-ribbon{font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:8px;}
 .rt-hero-h1{font-size:33px;font-weight:900;line-height:1.15;margin:0 0 10px;letter-spacing:.01em;}
 .rt-hero-red{color:var(--red);}
-.rt-hero-sub{font-size:12.5px;line-height:1.6;color:var(--ink-2);font-weight:600;margin:0 0 14px;}
+.rt-hero-sub{font-size:12.5px;line-height:1.6;color:var(--ink-2);font-weight:600;margin:0 0 12px;}
+.rt-hero-cats{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;}
+.rt-hero-cat{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.96);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;color:var(--ink);box-shadow:var(--shadow);}
+.rt-hero-cat i{width:7px;height:7px;border-radius:50%;flex:none;}
 .rt-trust{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
 .rt-trust-card{background:rgba(255,255,255,.96);border-radius:12px;padding:10px 9px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow);}
 .rt-trust-ico{width:34px;height:34px;border-radius:50%;border:2px dotted var(--gold);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;}
