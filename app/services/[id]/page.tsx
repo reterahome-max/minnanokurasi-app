@@ -38,6 +38,7 @@ const BA_MAP: Record<string, { before: string; after: string }> = {
   hood: { before: "ba_hood_before", after: "ba_hood_after" },
   kitchen: { before: "ba_kitchen_before", after: "ba_kitchen_after" },
   vacancy: { before: "ba_vacancy_before", after: "ba_vacancy_after" },
+  fan: { before: "ba_fan_before", after: "ba_fan_after" },
 };
 
 export default function ServiceDetail() {

@@ -75,6 +75,8 @@ const REFORM_BA: Record<string, { before: string; after: string }> = {
   ft_room:        { before: "ba_ftile_before", after: "ba_ftile_after" },
   net_window:     { before: "ba_net_before",   after: "ba_net_after" },
   toilet_toto_qr: { before: "ba_toilet_before", after: "ba_toilet_after" },
+  door_lever:     { before: "ba_door_before",  after: "ba_door_after" },
+  cloth_patch:    { before: "ba_patch_before", after: "ba_patch_after" },
 };
 
 export default function ReformDetail() {

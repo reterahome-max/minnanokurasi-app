@@ -8,7 +8,7 @@
  */
 
 export const IMAGES: Record<string, string> = {
-  hero: "",
+  hero: "/images/hero.jpg", // トップのイメージ写真
   // 人気・カテゴリ サムネ（実写真の「After（仕上がり）」を流用）
   ac: "/images/ba_ac_after.jpg",
   bath: "/images/ba_bath_after.jpg",
@@ -16,16 +16,16 @@ export const IMAGES: Record<string, string> = {
   kitchen: "/images/ba_kitchen_after.jpg",
   toilet: "/images/ba_toilet_after.jpg",
   washroom: "/images/ba_water_after.jpg",
-  fan: "",
+  fan: "/images/ba_fan_after.jpg",
   vacancy: "/images/ba_vacancy_after.jpg",
   // リフォーム サムネ
   cloth: "/images/ba_cloth_after.jpg",
   floor: "/images/ba_floor_after.jpg", // フローリング
   cf: "/images/ba_cf_after.jpg", // CF（クッションフロア）
   ftile: "/images/ba_ftile_after.jpg", // フロアタイル
-  door: "",
+  door: "/images/ba_door_after.jpg",
   net: "/images/ba_net_after.jpg",
-  patch: "",
+  patch: "/images/ba_patch_after.jpg",
   // ── ビフォーアフター（実写真）──
   // クリーニング
   ba_ac_before: "/images/ba_ac_before.jpg",
@@ -40,6 +40,8 @@ export const IMAGES: Record<string, string> = {
   ba_water_after: "/images/ba_water_after.jpg",
   ba_vacancy_before: "/images/ba_vacancy_before.jpg",
   ba_vacancy_after: "/images/ba_vacancy_after.jpg",
+  ba_fan_before: "/images/ba_fan_before.jpg",
+  ba_fan_after: "/images/ba_fan_after.jpg",
   // リフォーム
   ba_cloth_before: "/images/ba_cloth_before.jpg",
   ba_cloth_after: "/images/ba_cloth_after.jpg",
@@ -53,6 +55,10 @@ export const IMAGES: Record<string, string> = {
   ba_net_after: "/images/ba_net_after.jpg",
   ba_toilet_before: "/images/ba_toilet_before.jpg",
   ba_toilet_after: "/images/ba_toilet_after.jpg",
+  ba_door_before: "/images/ba_door_before.jpg",
+  ba_door_after: "/images/ba_door_after.jpg",
+  ba_patch_before: "/images/ba_patch_before.jpg",
+  ba_patch_after: "/images/ba_patch_after.jpg",
   // 予備（汎用リフォームBA。現在は各アイテム個別キーを使用）
   ba_before: "",
   ba_after: "",
