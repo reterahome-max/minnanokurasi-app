@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/simulator`, priority: 0.9 },
     { url: `${base}/reform`, priority: 0.9 },
     { url: `${base}/reform/simulator`, priority: 0.8 },
+    { url: `${base}/works`, priority: 0.8 },
     { url: `${base}/corporate`, priority: 0.6 },
     { url: `${base}/legal`, priority: 0.4 },
   ];

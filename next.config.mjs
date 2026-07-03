@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    // next/image の配信フォーマット（対応ブラウザには AVIF/WebP）
+    formats: ["image/avif", "image/webp"],
+  },
   experimental: {
     // lucide-react のバンドルを使用アイコンのみに絞る
     optimizePackageImports: ["lucide-react"],

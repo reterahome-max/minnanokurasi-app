@@ -182,6 +182,21 @@ export default function RETERAHome() {
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
       <style dangerouslySetInnerHTML={{ __html: styles }} />
+      {/* FAQ構造化データ（画面のよくあるご質問と同一内容） */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
 
       <div className="rt-shell">
         <Header />
@@ -216,7 +231,7 @@ export default function RETERAHome() {
         {/* ヒーロー */}
         <section className="rt-hero">
           <div className="rt-hero-photo">
-            <Photo srcKey="hero" alt="エアコンクリーニングの様子" />
+            <Photo srcKey="hero" alt="越谷市・春日部市で作業するRE:TERA HOMEのスタッフ" priority />
           </div>
           <div className="rt-hero-inner">
             <div className="rt-hero-ribbon">＼ 多くのお客様にご満足いただいています ／</div>
@@ -255,7 +270,7 @@ export default function RETERAHome() {
           <div className="rt-sim-head">
             <div className="rt-sim-left">
               <div className="rt-sim-ico"><Calculator size={22} strokeWidth={2.2} /></div>
-              <div><div className="rt-sim-title">かんたん料金シミュレーター</div><div className="rt-sim-note">30秒で料金がわかります</div></div>
+              <div><h2 className="rt-sim-title">かんたん料金シミュレーター</h2><div className="rt-sim-note">30秒で料金がわかります</div></div>
             </div>
             <div className="rt-sim-total">
               <div className="rt-sim-total-l">合計（税込）</div>
@@ -337,7 +352,7 @@ export default function RETERAHome() {
         {/* ④ 人気のサービス */}
         <section className="rt-pop">
           <div className="rt-pop-head">
-            <div className="rt-pop-title"><Crown size={20} strokeWidth={2.4} className="rt-crown" />人気のサービス</div>
+            <h2 className="rt-pop-title"><Crown size={20} strokeWidth={2.4} className="rt-crown" />人気のサービス</h2>
             <Link href="/services" className="rt-pop-all">すべて見る <ChevronRight size={15} strokeWidth={2.6} /></Link>
           </div>
           <div className="rt-cards">
@@ -363,7 +378,7 @@ export default function RETERAHome() {
 
         {/* ⑤ ビフォーアフター */}
         <section className="rt-ba-sec">
-          <div className="rt-sec-h">ビフォーアフター</div>
+          <h2 className="rt-sec-h">ビフォーアフター</h2>
           <p className="rt-sec-sub">プロの仕上がりを、実際の写真でご確認ください。</p>
           <div className="rt-ba-tabs">
             {BA.map((b, i) => (
@@ -388,7 +403,7 @@ export default function RETERAHome() {
 
         {/* ⑥ ご利用の流れ */}
         <section className="rt-flow-sec">
-          <div className="rt-sec-h">ご利用の流れ</div>
+          <h2 className="rt-sec-h">ご利用の流れ</h2>
           <p className="rt-sec-sub">初めての方でも安心してご利用いただける、かんたんステップ。</p>
           <div className="rt-flow">
             {FLOW.map((f, i) => {
@@ -419,7 +434,7 @@ export default function RETERAHome() {
 
         {/* ⑦ よくあるご質問 */}
         <section className="rt-faq-sec">
-          <div className="rt-sec-h">よくあるご質問</div>
+          <h2 className="rt-sec-h">よくあるご質問</h2>
           <p className="rt-sec-sub">お客様からよくいただくご質問をまとめました。</p>
           <div className="rt-faq-search">
             <Search size={18} strokeWidth={2.4} className="rt-faq-sico" />
@@ -448,6 +463,7 @@ export default function RETERAHome() {
         {/* フッター（会社情報・法務への導線） */}
         <footer className="rt-footer">
           <div className="rt-footer-links">
+            <Link href="/works">施工事例</Link>
             <Link href="/corporate">法人の方へ</Link>
             <Link href="/legal">利用規約・プライバシー</Link>
             <Link href="/legal">特定商取引法に基づく表記</Link>
@@ -479,7 +495,7 @@ const styles = `
 .rt-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--red);color:#fff;border:none;
   border-radius:12px;padding:15px;font-size:16px;font-weight:900;letter-spacing:.04em;cursor:pointer;box-shadow:var(--shadow-md);transition:background .15s;text-decoration:none;}
 .rt-cta:hover{background:var(--red-deep);}
-.rt-sec-h{font-size:21px;font-weight:900;letter-spacing:.01em;margin-bottom:3px;}
+.rt-sec-h{font-size:21px;font-weight:900;letter-spacing:.01em;margin:0 0 3px;}
 .rt-sec-sub{font-size:12px;color:var(--ink-2);font-weight:600;margin:0 0 14px;line-height:1.5;}
 
 /* area */
@@ -525,7 +541,7 @@ const styles = `
 .rt-sim-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:13px;}
 .rt-sim-left{display:flex;align-items:center;gap:10px;}
 .rt-sim-ico{width:42px;height:42px;border-radius:11px;background:#fff;color:var(--red);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:var(--shadow);}
-.rt-sim-title{font-size:15.5px;font-weight:900;}
+.rt-sim-title{font-size:15.5px;font-weight:900;margin:0;}
 .rt-sim-note{font-size:11px;font-weight:800;color:var(--red);margin-top:2px;}
 .rt-sim-total{text-align:right;flex:none;}
 .rt-sim-total-l{font-size:10.5px;color:var(--ink-2);font-weight:700;}
@@ -563,7 +579,7 @@ const styles = `
 /* popular */
 .rt-pop{margin-bottom:22px;}
 .rt-pop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.rt-pop-title{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:900;}
+.rt-pop-title{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:900;margin:0;}
 .rt-crown{color:#F0B400;}
 .rt-pop-all{display:flex;align-items:center;gap:2px;background:none;border:none;color:var(--ink-2);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;}
 .rt-cards{display:flex;gap:11px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}

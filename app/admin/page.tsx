@@ -127,7 +127,7 @@ function AdminInner() {
     msgs.filter((m) => m.threadId === threadId && m.sender === "user" && m.createdAtMs > (adminSeen[threadId] ?? 0)).length;
   const unreadThreads = threads.reduce((n, t) => n + (threadUnread(t.threadId) > 0 ? 1 : 0), 0);
   // 開いているスレッドは既読に（新着が来ても閲覧中なら消す）
-  useEffect(() => { if (selThread) markThreadSeen(selThread); }, [selThread, msgs]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (selThread) markThreadSeen(selThread); }, [selThread, msgs]);
 
   const sendReply = () => {
     const v = reply.trim();

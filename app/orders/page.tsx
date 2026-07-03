@@ -64,7 +64,7 @@ function OrdersInner() {
       .then((rows) => { setReal((rows ?? []).map(toView)); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   };
-  useEffect(load, [configured, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [configured, user]);
 
   // 未設定時はサンプル（デザイン確認用）。設定時は本人の実データ。
   const source = configured ? real ?? [] : ORDERS;

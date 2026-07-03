@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   },
   description:
     "エアコン・水回りのハウスクリーニングからリフォームまで。越谷市・春日部市に地域密着で対応。料金は税込表示・追加料金なし、Webから最短で予約できます。",
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "RE:TERA HOME",
@@ -21,11 +22,20 @@ export const metadata: Metadata = {
     description:
       "エアコン・水回りのハウスクリーニングからリフォームまで。越谷市・春日部市に地域密着で対応。Webから最短で予約できます。",
     locale: "ja_JP",
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "RE:TERA HOME｜プロの技術で快適な暮らしを。越谷市・春日部市のハウスクリーニング・リフォーム",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "RE:TERA HOME｜越谷・春日部のハウスクリーニング",
     description: "エアコン・水回りのクリーニングからリフォームまで、Webでかんたん予約。",
+    images: ["/og.jpg"],
   },
 };
 
@@ -42,6 +52,14 @@ const jsonLd = {
   name: COMPANY.name,
   url: COMPANY.url,
   email: COMPANY.email,
+  telephone: COMPANY.tel,
+  address: {
+    "@type": "PostalAddress",
+    addressRegion: "埼玉県",
+    addressLocality: "越谷市",
+    streetAddress: "蒲生4-6-33",
+  },
+  image: `${COMPANY.url}/og.jpg`,
   areaServed: ["越谷市", "春日部市"],
   description:
     "エアコン・水回りのハウスクリーニングとリフォームを提供する地域密着サービス。",
