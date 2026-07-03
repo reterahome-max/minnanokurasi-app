@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// RE:TERA HOME — Firestore セキュリティルール（STEP5 時点）
+// services / availability は公開読み取り。bookings はゲスト作成を許可（連絡先必須）。
+// users / messages は STEP6（認証）で本人限定に拡張する。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 価格マスター：誰でも読み取り可、書き込みは管理（コンソール / seed）のみ
+    match /services/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 空き枠：誰でも読み取り可。減算は予約作成時に行うため update を許可（数量検証付き）
+    match /availability/{id} {
+      allow read: if true;
+      allow update: if request.resource.data.remaining >= 0;
+      allow create, delete: if false;
+    }
+
+    // 予約：ゲスト作成可（氏名・電話必須）。読み取り/更新は STEP6 で本人/管理に限定
+    match /bookings/{id} {
+      allow create: if request.resource.data.customer.name is string
+                    && request.resource.data.customer.name.size() > 0
+                    && request.resource.data.customer.tel is string
+                    && request.resource.data.customer.tel.size() > 0;
+      allow read, update, delete: if false;
+    }
+
+    // 現地調査申し込み：ゲスト作成可（氏名・電話必須）
+    match /surveys/{id} {
+      allow create: if request.resource.data.customer.name is string
+                    && request.resource.data.customer.name.size() > 0
+                    && request.resource.data.customer.tel is string
+                    && request.resource.data.customer.tel.size() > 0;
+      allow read, update, delete: if false;
+    }
+
+    // 認証導入まではロック
+    match /users/{id}   { allow read, write: if false; }
+    match /messages/{id} { allow read, write: if false; }
+  }
+}
