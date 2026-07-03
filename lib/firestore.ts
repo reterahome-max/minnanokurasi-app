@@ -20,6 +20,7 @@ import {
   where,
   runTransaction,
   addDoc,
+  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -259,4 +260,68 @@ export async function createSurveyRequest(payload: SurveyRequestPayload): Promis
     createdAt: serverTimestamp(),
   });
   return { id: ref.id };
+}
+
+/* ───────── メッセージ（顧客↔管理者チャット） ─────────
+ * 1スレッド = 顧客の uid（threadId）。sender は 'user' | 'admin'。
+ * 読み書き可否は firestore.rules（本人スレッド or 管理者）が最終判定。 */
+export interface ChatMessage {
+  id: string;
+  threadId: string;
+  sender: "user" | "admin";
+  text: string;
+  userName: string;
+  createdAtMs: number;
+}
+
+const toMsg = (id: string, data: Record<string, unknown>): ChatMessage => {
+  const ts = data.createdAt as { toMillis?: () => number } | undefined;
+  return {
+    id,
+    threadId: (data.threadId as string) ?? "",
+    sender: (data.sender as "user" | "admin") ?? "user",
+    text: (data.text as string) ?? "",
+    userName: (data.userName as string) ?? "",
+    createdAtMs: ts?.toMillis?.() ?? Date.now(),
+  };
+};
+
+/** メッセージを1件送信。未設定時は何もしない（呼び出し側でローカル処理）。 */
+export async function sendMessage(m: {
+  threadId: string; sender: "user" | "admin"; text: string; userName?: string | null;
+}): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  await addDoc(collection(db, "messages"), {
+    threadId: m.threadId,
+    sender: m.sender,
+    text: m.text,
+    userName: m.userName ?? "",
+    createdAt: serverTimestamp(),
+  });
+}
+
+/** 1スレッド（threadId=顧客uid）を購読。返り値は購読解除関数。 */
+export function subscribeThread(threadId: string, cb: (msgs: ChatMessage[]) => void): () => void {
+  const db = getDb();
+  if (!db) { cb([]); return () => {}; }
+  const q = query(collection(db, "messages"), where("threadId", "==", threadId));
+  return onSnapshot(q, (snap) => {
+    const rows: ChatMessage[] = [];
+    snap.forEach((d) => rows.push(toMsg(d.id, d.data() as Record<string, unknown>)));
+    rows.sort((a, b) => a.createdAtMs - b.createdAtMs);
+    cb(rows);
+  }, () => cb([]));
+}
+
+/** 【管理者用】全メッセージを購読（スレッド一覧・会話表示に使用）。 */
+export function subscribeAllMessages(cb: (msgs: ChatMessage[]) => void): () => void {
+  const db = getDb();
+  if (!db) { cb([]); return () => {}; }
+  return onSnapshot(collection(db, "messages"), (snap) => {
+    const rows: ChatMessage[] = [];
+    snap.forEach((d) => rows.push(toMsg(d.id, d.data() as Record<string, unknown>)));
+    rows.sort((a, b) => a.createdAtMs - b.createdAtMs);
+    cb(rows);
+  }, () => cb([]));
 }

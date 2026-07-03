@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar, MapPin, Phone, User, Mail, CreditCard, Wrench,
   MessageSquare, ShieldAlert, ClipboardList, CalendarClock, Home, Camera,
+  ArrowLeft, Send,
 } from "lucide-react";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
@@ -12,7 +13,8 @@ import { SkeletonList, ErrorState } from "@/components/states";
 import { useAuth } from "@/context/AuthContext";
 import { isAdminEmail } from "@/lib/admin";
 import {
-  fetchAllBookings, fetchAllSurveys, type BookingDoc, type SurveyDoc,
+  fetchAllBookings, fetchAllSurveys, subscribeAllMessages, sendMessage,
+  type BookingDoc, type SurveyDoc, type ChatMessage,
 } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
 import { COMPANY } from "@/lib/company";
@@ -33,6 +35,11 @@ const recvLabel = (ms: number) => {
 };
 const statusJa = (s: string) =>
   s === "completed" ? "完了" : s === "cancelled" ? "キャンセル" : "予約中";
+const hm = (ms: number) => {
+  if (!ms) return "";
+  const d = new Date(ms);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 // 未設定（ローカル開発）時のプレビュー用サンプル
 const SAMPLE_BK: BookingDoc[] = [
@@ -49,6 +56,12 @@ const SAMPLE_BK: BookingDoc[] = [
     reform: { items: [{ id: "cloth_std", val: 30, title: "量産クロス貼り替え", total: 33900 }], net: 33900, incl: 37290 },
     customer: { name: "春日部 花子", kana: "かすかべ はなこ", tel: "080-2222-3333", email: "hanako@example.com", zip: "344-0067", addr: "埼玉県春日部市中央2-10", building: "", subtel: "", note: "" },
   },
+];
+const SAMPLE_MSGS: ChatMessage[] = [
+  { id: "m1", threadId: "u1", sender: "user", text: "エアコンの予約日を1日ずらせますか？", userName: "越谷 太郎", createdAtMs: Date.now() - 7200_000 },
+  { id: "m2", threadId: "u1", sender: "admin", text: "ご連絡ありがとうございます。翌日13:00〜で空きがございます。", userName: "RE:TERA HOME", createdAtMs: Date.now() - 7000_000 },
+  { id: "m3", threadId: "u1", sender: "user", text: "ではその時間でお願いします！", userName: "越谷 太郎", createdAtMs: Date.now() - 6800_000 },
+  { id: "m4", threadId: "u2", sender: "user", text: "クロスの見積もりの件、写真を追加で送ります。", userName: "春日部 花子", createdAtMs: Date.now() - 3600_000 },
 ];
 const SAMPLE_SV: SurveyDoc[] = [
   {
@@ -68,11 +81,42 @@ function AdminInner() {
   const { user, configured } = useAuth();
   const admin = !configured || isAdminEmail(user?.email);
 
-  const [tab, setTab] = useState<"bookings" | "surveys">("bookings");
+  const [tab, setTab] = useState<"bookings" | "surveys" | "messages">("bookings");
   const [bk, setBk] = useState<BookingDoc[] | null>(null);
   const [sv, setSv] = useState<SurveyDoc[] | null>(null);
+  const [msgs, setMsgs] = useState<ChatMessage[]>([]);
+  const [selThread, setSelThread] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(configured);
   const [error, setError] = useState(false);
+
+  // メッセージはリアルタイム購読（管理者のみ）。未設定時はサンプル表示。
+  useEffect(() => {
+    if (!configured) { setMsgs(SAMPLE_MSGS); return; }
+    if (!admin) return;
+    const unsub = subscribeAllMessages(setMsgs);
+    return () => unsub();
+  }, [configured, admin]);
+
+  // スレッド一覧（threadId 単位に集約、新しい順）
+  const threads = useMemo(() => {
+    const map = new Map<string, { threadId: string; userName: string; last: string; lastMs: number; count: number }>();
+    for (const m of msgs) {
+      const cur = map.get(m.threadId);
+      const userName = m.sender === "user" && m.userName ? m.userName : cur?.userName ?? "";
+      map.set(m.threadId, { threadId: m.threadId, userName, last: m.text, lastMs: m.createdAtMs, count: (cur?.count ?? 0) + 1 });
+    }
+    return [...map.values()].sort((a, b) => b.lastMs - a.lastMs);
+  }, [msgs]);
+  const conv = selThread ? msgs.filter((m) => m.threadId === selThread) : [];
+  const selName = threads.find((t) => t.threadId === selThread)?.userName || "お客様";
+
+  const sendReply = () => {
+    const v = reply.trim();
+    if (!v || !selThread) return;
+    setReply("");
+    sendMessage({ threadId: selThread, sender: "admin", text: v, userName: COMPANY.name }).catch(() => {});
+  };
 
   const load = () => {
     if (!configured) { setBk(SAMPLE_BK); setSv(SAMPLE_SV); setLoading(false); return; }
@@ -105,17 +149,59 @@ function AdminInner() {
         ) : (
           <>
             <div className="rt-adm-stats">
-              <button className={"rt-adm-stat" + (tab === "bookings" ? " on" : "")} onClick={() => setTab("bookings")}>
+              <button className={"rt-adm-stat" + (tab === "bookings" ? " on" : "")} onClick={() => { setTab("bookings"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><Calendar size={18} strokeWidth={2.2} /></div>
                 <div><div className="rt-adm-stat-n">{bk?.length ?? "—"}</div><div className="rt-adm-stat-l">予約</div></div>
               </button>
-              <button className={"rt-adm-stat" + (tab === "surveys" ? " on" : "")} onClick={() => setTab("surveys")}>
+              <button className={"rt-adm-stat" + (tab === "surveys" ? " on" : "")} onClick={() => { setTab("surveys"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><ClipboardList size={18} strokeWidth={2.2} /></div>
                 <div><div className="rt-adm-stat-n">{sv?.length ?? "—"}</div><div className="rt-adm-stat-l">見積依頼</div></div>
               </button>
+              <button className={"rt-adm-stat" + (tab === "messages" ? " on" : "")} onClick={() => { setTab("messages"); setSelThread(null); }}>
+                <div className="rt-adm-stat-ico"><MessageSquare size={18} strokeWidth={2.2} /></div>
+                <div><div className="rt-adm-stat-n">{threads.length}</div><div className="rt-adm-stat-l">メッセージ</div></div>
+              </button>
             </div>
 
-            {loading ? (
+            {tab === "messages" ? (
+              selThread === null ? (
+                threads.length > 0 ? (
+                  <div className="rt-adm-threads">
+                    {threads.map((t) => (
+                      <button key={t.threadId} className="rt-adm-thread" onClick={() => setSelThread(t.threadId)}>
+                        <div className="rt-adm-th-av">{(t.userName || "客").slice(0, 1)}</div>
+                        <div className="rt-adm-th-body">
+                          <div className="rt-adm-th-top"><span className="rt-adm-th-name">{t.userName || "お客様"}</span><span className="rt-adm-th-time">{hm(t.lastMs)}</span></div>
+                          <div className="rt-adm-th-last">{t.last}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : <div className="rt-adm-empty"><MessageSquare size={26} strokeWidth={1.8} />まだメッセージはありません</div>
+              ) : (
+                <div className="rt-adm-conv">
+                  <div className="rt-adm-conv-head">
+                    <button className="rt-adm-conv-back" onClick={() => setSelThread(null)} aria-label="一覧へ戻る"><ArrowLeft size={18} strokeWidth={2.4} /></button>
+                    <div className="rt-adm-conv-name">{selName}</div>
+                  </div>
+                  <div className="rt-adm-conv-body">
+                    {conv.map((m) => {
+                      const mine = m.sender === "admin";
+                      return (
+                        <div className={"rt-adm-bwrap " + (mine ? "mine" : "theirs")} key={m.id}>
+                          <div className={"rt-adm-bub " + (mine ? "b-me" : "b-them")}>{m.text}</div>
+                          <div className="rt-adm-btime">{hm(m.createdAtMs)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="rt-adm-reply">
+                    <input className="rt-adm-reply-in" placeholder="返信を入力" value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} />
+                    <button className={"rt-adm-reply-btn" + (reply.trim() ? " on" : "")} onClick={sendReply} disabled={!reply.trim()} aria-label="送信"><Send size={18} strokeWidth={2.2} /></button>
+                  </div>
+                </div>
+              )
+            ) : loading ? (
               <SkeletonList count={3} />
             ) : error ? (
               <ErrorState onRetry={load} />
@@ -208,12 +294,39 @@ const styles = `
 .rt-page-head{padding:16px 2px 14px;}
 .rt-page-title{font-size:24px;font-weight:900;margin:0 0 4px;}
 .rt-page-sub{font-size:12.5px;color:var(--ink-2);font-weight:600;margin:0;}
-.rt-adm-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
-.rt-adm-stat{display:flex;align-items:center;gap:11px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;cursor:pointer;text-align:left;}
+.rt-adm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.rt-adm-stat{display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;text-align:center;}
 .rt-adm-stat.on{border-color:var(--red);background:var(--red-soft-2);}
-.rt-adm-stat-ico{flex:none;width:40px;height:40px;border-radius:11px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}
-.rt-adm-stat-n{font-size:22px;font-weight:900;line-height:1;}
-.rt-adm-stat-l{font-size:11.5px;font-weight:700;color:var(--ink-2);margin-top:3px;}
+.rt-adm-stat-ico{flex:none;width:36px;height:36px;border-radius:10px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}
+.rt-adm-stat-n{font-size:20px;font-weight:900;line-height:1;}
+.rt-adm-stat-l{font-size:11px;font-weight:700;color:var(--ink-2);margin-top:2px;}
+/* メッセージ：スレッド一覧 */
+.rt-adm-threads{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);}
+.rt-adm-thread{display:flex;align-items:center;gap:11px;padding:13px 14px;background:none;border:none;border-bottom:1px solid var(--line);cursor:pointer;text-align:left;width:100%;}
+.rt-adm-thread:last-child{border-bottom:none;}
+.rt-adm-th-av{flex:none;width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;}
+.rt-adm-th-body{flex:1;min-width:0;}
+.rt-adm-th-top{display:flex;justify-content:space-between;gap:8px;}
+.rt-adm-th-name{font-size:13.5px;font-weight:800;}
+.rt-adm-th-time{font-size:10.5px;color:var(--ink-3);font-weight:700;flex:none;}
+.rt-adm-th-last{font-size:12px;color:var(--ink-2);font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* メッセージ：会話 */
+.rt-adm-conv{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;}
+.rt-adm-conv-head{display:flex;align-items:center;gap:9px;padding:11px 12px;border-bottom:1px solid var(--line);}
+.rt-adm-conv-back{background:none;border:none;color:var(--ink);cursor:pointer;display:flex;padding:2px;flex:none;}
+.rt-adm-conv-name{font-size:14px;font-weight:900;}
+.rt-adm-conv-body{display:flex;flex-direction:column;gap:8px;padding:14px;max-height:52vh;overflow-y:auto;background:var(--bg);}
+.rt-adm-bwrap{display:flex;flex-direction:column;max-width:82%;}
+.rt-adm-bwrap.mine{align-self:flex-end;align-items:flex-end;}
+.rt-adm-bwrap.theirs{align-self:flex-start;align-items:flex-start;}
+.rt-adm-bub{font-size:13px;line-height:1.55;font-weight:500;padding:10px 13px;border-radius:15px;}
+.b-them{background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px;color:var(--ink);}
+.b-me{background:var(--red);color:#fff;border-bottom-right-radius:5px;}
+.rt-adm-btime{font-size:9.5px;color:var(--ink-3);font-weight:600;margin-top:3px;}
+.rt-adm-reply{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);}
+.rt-adm-reply-in{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:13.5px;color:var(--ink);outline:none;font-family:inherit;}
+.rt-adm-reply-btn{width:40px;height:40px;border-radius:50%;background:#D7DADE;color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+.rt-adm-reply-btn.on{background:var(--red);}
 .rt-adm-list{display:flex;flex-direction:column;gap:13px;}
 .rt-adm-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);}
 .rt-adm-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}

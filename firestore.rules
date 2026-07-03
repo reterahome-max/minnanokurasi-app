@@ -118,7 +118,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // メッセージは今後
-    match /messages/{id} { allow read, write: if false; }
+    // メッセージ：本人スレッド（threadId==uid）または管理者のみ読み書き。
+    match /messages/{id} {
+      allow read: if isAdmin()
+                  || (request.auth != null && resource.data.threadId == request.auth.uid);
+      allow create: if request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.threadId is string
+                    && (
+                      (isAdmin() && request.resource.data.sender == 'admin')
+                      || (request.auth != null
+                          && request.resource.data.threadId == request.auth.uid
+                          && request.resource.data.sender == 'user')
+                    );
+      allow update, delete: if false;
+    }
   }
 }

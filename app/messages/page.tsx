@@ -2,40 +2,54 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Phone, Send, Plus, Check, CheckCheck } from "lucide-react";
+import { ArrowLeft, Phone, Send, Plus, Check } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/context/AuthContext";
-import { fetchUserBookings } from "@/lib/firestore";
+import { fetchUserBookings, subscribeThread, sendMessage, type ChatMessage } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
 
 /**
- * RE:TERA HOME — メッセージ（スタッフとのチャット）
- * RETERA_Messages.jsx を移植。送信は Phase1（担当が確認後、メール/電話で返信）。
- * バナーはログイン中ユーザーの直近予約を表示。入力はセッション内で保持。
+ * RE:TERA HOME — メッセージ（スタッフとのチャット・Firestore接続）
+ * 1スレッド=ログインユーザーの uid。送信は messages に保存、管理者の返信を購読して即時表示。
+ * Firebase 未設定時はローカルのデモ（sessionStorage）で動作。
  */
 type Msg = { from: "system" | "staff" | "me"; text: string; time: string; read?: boolean };
 
-const INITIAL: Msg[] = [
-  { from: "system", text: "RE:TERA HOME サポートです。ご予約の変更・ご相談など、ご用件をお送りください。担当が確認のうえ、お電話またはメールでご連絡します。", time: "" },
-];
+const INTRO: Msg = { from: "system", text: "RE:TERA HOME サポートです。ご予約の変更・ご相談など、ご用件をお送りください。担当が確認のうえご返信します。", time: "" };
 const QUICK = ["日程を変更したい", "作業時間の目安は？", "追加オプションを相談", "領収書がほしい"];
 const STORAGE_KEY = "retera_messages";
 
-export default function Messages() {
+const hm = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+function MessagesInner() {
   const router = useRouter();
   const { user, configured } = useAuth();
-  const [msgs, setMsgs] = useState<Msg[]>(INITIAL);
+  const live = configured && !!user; // Firestore接続モード
+  const [local, setLocal] = useState<Msg[]>([]); // 未設定時のデモ用
+  const [remote, setRemote] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [banner, setBanner] = useState<{ title: string; date: string } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // 送信履歴をセッション内で保持（更新で消えない）
+  // 未設定（デモ）：送信履歴をセッション内で保持
   useEffect(() => {
+    if (live) return;
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) setMsgs([...INITIAL, ...JSON.parse(raw)]);
+      if (raw) setLocal(JSON.parse(raw));
     } catch { /* noop */ }
-  }, []);
+  }, [live]);
+
+  // 接続モード：自分のスレッドを購読
+  useEffect(() => {
+    if (!live || !user) return;
+    const unsub = subscribeThread(user.uid, setRemote);
+    return () => unsub();
+  }, [live, user]);
 
   // ログイン中は直近の予約をバナーに表示
   useEffect(() => {
@@ -54,19 +68,31 @@ export default function Messages() {
     }).catch(() => {});
   }, [configured, user]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  // 表示用リスト（先頭に案内文）
+  const msgs: Msg[] = [
+    INTRO,
+    ...(live
+      ? remote.map((m): Msg => ({ from: m.sender === "admin" ? "staff" : "me", text: m.text, time: hm(m.createdAtMs), read: true }))
+      : local),
+  ];
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [remote, local]);
 
   const send = (t?: string) => {
     const v = (t ?? text).trim();
     if (!v) return;
-    const now = new Date();
-    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
-    setMsgs((m) => {
+    setText("");
+    if (live && user) {
+      sendMessage({ threadId: user.uid, sender: "user", text: v, userName: user.displayName ?? "お客様" }).catch(() => {});
+      return;
+    }
+    // 未設定：ローカルデモ
+    const time = hm(Date.now());
+    setLocal((m) => {
       const next = [...m, { from: "me" as const, text: v, time, read: false }];
-      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next.filter((x) => x.from === "me"))); } catch { /* noop */ }
+      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
       return next;
     });
-    setText("");
   };
 
   return (
@@ -105,7 +131,7 @@ export default function Messages() {
                 <div className="rt-bub-wrap">
                   <div className={"rt-bub " + (mine ? "bub-me" : "bub-them")}>{m.text}</div>
                   <div className="rt-bub-meta">
-                    {mine && (m.read ? <CheckCheck size={13} strokeWidth={2.4} className="rt-read" /> : <Check size={13} strokeWidth={2.4} className="rt-sent" />)}
+                    {mine && <Check size={13} strokeWidth={2.4} className="rt-sent" />}
                     <span>{m.time}</span>
                   </div>
                 </div>
@@ -128,6 +154,14 @@ export default function Messages() {
         <BottomNav active="messages" />
       </div>
     </div>
+  );
+}
+
+export default function Messages() {
+  return (
+    <AuthGuard>
+      <MessagesInner />
+    </AuthGuard>
   );
 }
 
