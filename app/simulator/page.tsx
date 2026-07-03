@@ -12,6 +12,7 @@ import { useBooking } from "@/context/BookingContext";
 import {
   getService, OPTIONS, calcBill, serviceGroups, groupForService,
 } from "@/lib/pricing";
+import { REFORM_MENU } from "@/lib/reformPricing";
 
 /**
  * RE:TERA HOME — 料金シミュレーター（全サービス対応 / type分岐）
@@ -67,7 +68,12 @@ function SimulatorInner() {
   const activeTab = isAc ? 0 : svc.cat === "空室" ? 2 : 1;
 
   // サービス切替：種類は先頭、数量1、オプションクリア
+  // リフォームを選んだ場合はクリーニング計算に混ぜず、税抜の概算ページへ遷移。
   const onServiceChange = (key: string) => {
+    if (key.startsWith("reform:")) {
+      router.push("/reform/" + key.slice("reform:".length));
+      return;
+    }
     const g = groups.find((x) => x.key === key);
     if (!g) return;
     const newId = g.type === "ac" ? g.variants![0].id : g.service!.id;
@@ -100,7 +106,12 @@ function SimulatorInner() {
         <div className="rt-q"><span className="rt-q-t">サービスを選ぶ</span><span className="rt-req">必須</span></div>
         <div className="rt-select-box rt-svc-box">
           <select value={group.key} onChange={(e) => onServiceChange(e.target.value)}>
-            {groups.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+            <optgroup label="ハウスクリーニング・エアコン">
+              {groups.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </optgroup>
+            <optgroup label="リフォーム（税抜・概算へ）">
+              {REFORM_MENU.map((r) => <option key={r.id} value={"reform:" + r.id}>{r.label}</option>)}
+            </optgroup>
           </select>
           <ChevronDown size={16} />
         </div>

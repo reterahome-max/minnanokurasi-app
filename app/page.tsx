@@ -33,6 +33,7 @@ import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
 import BeforeAfter from "@/components/BeforeAfter";
 import { getService, calcBill, serviceGroups, groupForService, num, CATEGORIES as CATS } from "@/lib/pricing";
+import { REFORM_MENU } from "@/lib/reformPricing";
 import { fetchMonthAvailability } from "@/lib/firestore";
 import { today, defaultAvail, shortDateLabel } from "@/lib/booking";
 import { COMPANY, isServiceArea } from "@/lib/company";
@@ -164,6 +165,11 @@ export default function RETERAHome() {
   const simIsAc = simGroup.type === "ac";
   const total = calcBill(simServiceId, simQty, []).totalIncl.toLocaleString("ja-JP");
   const onSimServiceChange = (key: string) => {
+    // リフォームは税抜の別エンジン。ここでは計算せず概算ページへ遷移。
+    if (key.startsWith("reform:")) {
+      router.push("/reform/" + key.slice("reform:".length));
+      return;
+    }
     const g = simGroups.find((x) => x.key === key);
     if (!g) return;
     setSimServiceId(g.type === "ac" ? g.variants![0].id : g.service!.id);
@@ -261,7 +267,12 @@ export default function RETERAHome() {
               <span className="rt-select-l">サービスを選ぶ</span>
               <div className="rt-select-box">
                 <select value={simGroup.key} onChange={(e) => onSimServiceChange(e.target.value)}>
-                  {simGroups.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+                  <optgroup label="ハウスクリーニング・エアコン">
+                    {simGroups.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+                  </optgroup>
+                  <optgroup label="リフォーム（税抜・概算へ）">
+                    {REFORM_MENU.map((r) => <option key={r.id} value={"reform:" + r.id}>{r.label}</option>)}
+                  </optgroup>
                 </select><ChevronDown size={16} />
               </div>
             </label>

@@ -168,3 +168,19 @@ export const reformItemsByCat = (cat: string): ReformItem[] =>
   cat === "すべて" ? REFORM_ITEMS : REFORM_ITEMS.filter((i) => i.cat === cat);
 
 export const getReformItem = (id: string) => REFORM_ITEMS.find((i) => i.id === id);
+
+/**
+ * シミュレーターのドロップダウン用・リフォーム代表項目（ナビ専用）。
+ * 選択時は /reform/[id]（税抜の概算フロー）へ遷移させる。価格計算はここでは行わない。
+ */
+export const REFORM_MENU: { id: string; label: string }[] = [
+  { id: "cloth_std",     label: "量産クロス貼り替え" },
+  { id: "cloth_high",    label: "ハイグレードクロス貼り替え" },
+  { id: "cf_room",       label: "CF（クッションフロア）貼り替え" },
+  { id: "fl_room",       label: "フローリング貼り替え" },
+  { id: "ft_room",       label: "フロアタイル貼り替え" },
+  { id: "door_lever",    label: "室内ドアハンドル交換" },
+  { id: "net_window",    label: "網戸張り替え" },
+  { id: "toilet_toto_qr",label: "トイレ交換" },
+  { id: "cloth_patch",   label: "クロス壁穴・凹み補修" },
+];
