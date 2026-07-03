@@ -1,0 +1,358 @@
+/* RE:TERA HOME — 共通スタイル
+ * すべての画面で共有する :root 変数 / フォント / 共通部品（ヘッダー・ボトムナビ・写真）。
+ * 値は各 Artifact の :root / .rt-header / .rt-nav / .rt-photo からそのまま移植（変更なし）。
+ */
+
+:root {
+  --bg: #F5F6F7;
+  --surface: #fff;
+  --red: #C9352E;
+  --red-deep: #A82B25;
+  --red-soft: #FBEDEC;
+  --red-soft-2: #FDF4F3;
+  --gold: #E3A93C;
+  --amber: #E3A93C;
+  --green: #1E9E54;
+  --green-soft: #E4F4EA;
+  --navy: #0C2A33;
+  --navy-2: #15414B;
+  --blue: #2563EB;
+  --blue-soft: #E7EEFD;
+  --line-green: #06C755;
+  --err: #D6342C;
+  --ink: #1B1B1D;
+  --ink-2: #5A5E63;
+  --ink-3: #9AA0A6;
+  --line: #EBECEE;
+  --hero-1: #EAF3F9;
+  --hero-2: #DDEDF6;
+  --shadow: 0 2px 10px rgba(20, 28, 38, .05);
+  --shadow-md: 0 4px 16px rgba(20, 28, 38, .08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ───────── 共通シェル ───────── */
+.rt-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg);
+  padding: 0 14px;
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 480px) {
+  .rt-shell {
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+}
+
+/* ───────── 共通ヘッダー（components/Header.tsx） ───────── */
+.rt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 2px 8px;
+}
+.rt-icon-btn {
+  position: relative;
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 3px;
+  display: flex;
+}
+.rt-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.rt-brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--red);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.rt-brand-name {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  line-height: 1.05;
+}
+.rt-brand-tag {
+  font-size: 10px;
+  color: var(--ink-2);
+  font-weight: 600;
+  letter-spacing: .16em;
+  margin-top: 2px;
+}
+.rt-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rt-bell-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1.5px solid #fff;
+}
+.rt-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+}
+
+/* ───────── 共通ボトム（components/BottomNav.tsx） ───────── */
+.rt-bottom {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 50;
+}
+.rt-nav {
+  display: flex;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  padding: 7px 4px calc(7px + env(safe-area-inset-bottom));
+}
+.rt-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px;
+  text-decoration: none;
+}
+.rt-nav-on {
+  color: var(--red);
+}
+
+/* ───────── 共通写真（components/Photo.tsx） ───────── */
+.rt-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.rt-ph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: linear-gradient(150deg, #EDF1F3, #E1E7EA);
+  color: #AAB2B8;
+}
+.rt-ph span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+/* ───────── 状態表示（components/states） ───────── */
+.rt-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px;
+}
+.rt-state-ico {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red-soft);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.rt-state-ico.err {
+  background: #FDF3F2;
+  color: var(--err);
+}
+.rt-state-t {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
+.rt-state-d {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  max-width: 280px;
+}
+.rt-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 13px 22px;
+  cursor: pointer;
+}
+.rt-state-btn.solid {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+.rt-state-btn.solid:hover {
+  background: var(--red-deep);
+}
+.rt-spin {
+  color: var(--red);
+  animation: rt-rot 1s linear infinite;
+}
+@keyframes rt-rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-spin {
+    animation: none;
+  }
+}
+
+/* skeleton */
+.rt-skel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+.rt-skel-card {
+  display: flex;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 13px;
+}
+.rt-skel-thumb {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 11px;
+  background: #EDEFF1;
+}
+.rt-skel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 4px;
+}
+.rt-skel-line {
+  height: 12px;
+  border-radius: 6px;
+  background: #EDEFF1;
+}
+.rt-skel-line.tall {
+  height: 18px;
+}
+.rt-skel-line.w70 {
+  width: 70%;
+}
+.rt-skel-line.w45 {
+  width: 45%;
+}
+.rt-skel-line.w30 {
+  width: 30%;
+}
+.rt-skel-thumb,
+.rt-skel-line {
+  position: relative;
+  overflow: hidden;
+}
+.rt-skel-thumb::after,
+.rt-skel-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .65), transparent);
+  animation: rt-shimmer 1.3s infinite;
+}
+@keyframes rt-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-skel-thumb::after,
+  .rt-skel-line::after {
+    animation: none;
+  }
+}
+
+/* image fallback */
+.rt-img-fb {
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #EDF1F3;
+  color: #AAB2B8;
+}
+.rt-img-fb span {
+  font-size: 10px;
+  font-weight: 700;
+}
