@@ -56,6 +56,12 @@ export async function fetchMonthAvailability(
   return Object.keys(result).length ? result : AVAIL;
 }
 
+export interface ReformSummary {
+  items: { id: string; val: number; title: string; total: number }[];
+  net: number;  // 税抜合計
+  incl: number; // 税込参考
+}
+
 export interface BookingPayload {
   serviceId: string;
   qty: number;
@@ -66,12 +72,18 @@ export interface BookingPayload {
   customer: Customer;
   payment: string;
   totalIncl: number;
+  /** ログイン中のユーザーID（ゲストは null）。/orders の本人予約フィルタに使用 */
+  userId?: string | null;
   /** リフォーム予約時のみ。金額の出所は lib/reformPricing（税抜）。 */
-  reform?: {
-    items: { id: string; val: number; title: string; total: number }[];
-    net: number;  // 税抜合計
-    incl: number; // 税込参考
-  } | null;
+  reform?: ReformSummary | null;
+}
+
+/** Firestore の bookings ドキュメント（読み取り用） */
+export interface BookingDoc extends BookingPayload {
+  id: string;
+  bookingNo: string;
+  status: string;
+  createdAtMs: number;
 }
 
 /**
@@ -109,12 +121,39 @@ export async function createBooking(
   return { id: ref.id, bookingNo };
 }
 
+/**
+ * ログイン中ユーザーの予約一覧を取得（新しい順）。
+ * 未設定時は null を返し、画面側はサンプル表示にフォールバックする。
+ * where(userId==) のみで取得し、並べ替えはクライアント側（複合インデックス不要）。
+ */
+export async function fetchUserBookings(userId: string): Promise<BookingDoc[] | null> {
+  const db = getDb();
+  if (!db) return null; // 未設定 → 画面はサンプルへ
+  const q = query(collection(db, "bookings"), where("userId", "==", userId));
+  const snap = await getDocs(q);
+  const rows: BookingDoc[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const ts = data.createdAt as { toMillis?: () => number } | undefined;
+    rows.push({
+      id: d.id,
+      ...(data as unknown as BookingPayload),
+      bookingNo: (data.bookingNo as string) ?? "",
+      status: (data.status as string) ?? "confirmed",
+      createdAtMs: ts?.toMillis?.() ?? 0,
+    });
+  });
+  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return rows;
+}
+
 export interface SurveyRequestPayload {
   items: string[];   // 工事リスト（表示文字列）
   net: number;       // 概算合計（税抜）
   customer: { name: string; tel: string; email: string; zip: string; addr: string; building: string; note: string };
   prefs: { date: string; time: string }[]; // 希望日程（最大3）
   photoCount: number;
+  userId?: string | null;
 }
 
 /**

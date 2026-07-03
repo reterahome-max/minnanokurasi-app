@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,16 +11,14 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/context/AuthContext";
+import { fetchUserBookings, type BookingDoc } from "@/lib/firestore";
+import { getService } from "@/lib/pricing";
 
 /**
  * RE:TERA HOME — マイページ
  * RETERA_MyPage.jsx を移植。ログイン必須（AuthGuard）。ログアウトを Auth に接続。
+ * 統計・次回予約は Firestore の本人予約から算出（未設定時はサンプル表示）。
  */
-const STATS = [
-  { label: "予約中", value: "1" },
-  { label: "利用回数", value: "3" },
-  { label: "ポイント", value: "1,200" },
-];
 const MENU_MAIN = [
   { icon: CalendarCheck, label: "予約・注文一覧", sub: "予約中 1件・完了 2件", href: "/orders" },
   { icon: MapPin, label: "登録住所", sub: "埼玉県越谷市南越谷 1-26-12", href: "" },
@@ -35,8 +34,31 @@ const MENU_SUB = [
 
 function MyPageInner() {
   const router = useRouter();
-  const { user, signOutUser } = useAuth();
+  const { user, signOutUser, configured } = useAuth();
   const name = user?.displayName ?? "ゲスト";
+
+  const [bookings, setBookings] = useState<BookingDoc[] | null>(null);
+  useEffect(() => {
+    if (!configured || !user) return;
+    fetchUserBookings(user.uid).then(setBookings).catch(() => {});
+  }, [configured, user]);
+
+  // 実データがあれば統計・次回予約を算出。無ければサンプル表示。
+  const hasReal = configured && bookings != null;
+  const upcoming = (bookings ?? []).filter((b) => b.status !== "completed" && b.status !== "cancelled");
+  const STATS = [
+    { label: "予約中", value: hasReal ? String(upcoming.length) : "1" },
+    { label: "利用回数", value: hasReal ? String(bookings!.length) : "3" },
+    { label: "ポイント", value: "1,200" },
+  ];
+  const next = upcoming[0] ?? (bookings ?? [])[0];
+  const nextSvc = next
+    ? next.reform != null && next.reform.items.length > 0
+      ? `リフォーム工事 × ${next.reform.items.length}件`
+      : `${getService(next.serviceId)?.title ?? next.serviceId} × ${next.qty}${getService(next.serviceId)?.unitLabel ?? ""}`
+    : "壁掛けエアコンクリーニング × 2台";
+  const nextDate = next ? next.dateLabel : "7月3日（木）13:00〜15:00";
+  const hasNext = !hasReal || Boolean(next);
 
   const handleLogout = async () => {
     await signOutUser();
@@ -69,17 +91,19 @@ function MyPageInner() {
           ))}
         </div>
 
-        <div className="rt-next">
-          <div className="rt-next-head"><CalendarCheck size={16} strokeWidth={2.3} />次回のご予約</div>
-          <div className="rt-next-body">
-            <div>
-              <div className="rt-next-svc">壁掛けエアコンクリーニング × 2台</div>
-              <div className="rt-next-date">7月3日（木）13:00〜15:00</div>
+        {hasNext && (
+          <div className="rt-next">
+            <div className="rt-next-head"><CalendarCheck size={16} strokeWidth={2.3} />次回のご予約</div>
+            <div className="rt-next-body">
+              <div>
+                <div className="rt-next-svc">{nextSvc}</div>
+                <div className="rt-next-date">{nextDate}</div>
+              </div>
+              <span className="rt-next-state">予約確定</span>
             </div>
-            <span className="rt-next-state">予約確定</span>
+            <Link href="/orders" className="rt-next-btn">予約詳細を見る<ChevronRight size={15} strokeWidth={2.6} /></Link>
           </div>
-          <Link href="/orders" className="rt-next-btn">予約詳細を見る<ChevronRight size={15} strokeWidth={2.6} /></Link>
-        </div>
+        )}
 
         <div className="rt-menu">
           {MENU_MAIN.map((m, i) => { const Icon = m.icon; const inner = (

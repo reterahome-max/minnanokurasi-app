@@ -6,6 +6,7 @@ import {
   ArrowLeft, Check, Calendar, Clock, MapPin, User, Phone, Mail, CreditCard, ChevronRight,
 } from "lucide-react";
 import { useBooking } from "@/context/BookingContext";
+import { useAuth } from "@/context/AuthContext";
 import { getService, optionsFor, calcBill, num } from "@/lib/pricing";
 import { getReformItem, quote } from "@/lib/reformPricing";
 import { fullDateLabel, paymentConfirmLabel } from "@/lib/booking";
@@ -19,6 +20,7 @@ import { createBooking } from "@/lib/firestore";
 export default function FinalConfirm() {
   const router = useRouter();
   const { serviceId, qty, optionIds, day, slot, customer, payment, hasSchedule, set, reform } = useBooking();
+  const { user } = useAuth();
   const [agree, setAgree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -67,6 +69,7 @@ export default function FinalConfirm() {
         customer,
         payment,
         totalIncl: isReform ? reformIncl : bill.totalIncl,
+        userId: user?.uid ?? null,
         reform: isReform
           ? { items: reformRows.map(({ id, val, title, total }) => ({ id, val, title, total })), net: reformNet, incl: reformIncl }
           : null,

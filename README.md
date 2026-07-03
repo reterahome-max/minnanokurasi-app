@@ -59,8 +59,11 @@ firestore.rules       Firestore セキュリティルール
 |---|---|
 | `services` | 価格マスター（`lib/pricing` の初期データ） |
 | `availability` | 日付→空き枠（doc id = `YYYY-MM-DD`、`{ month, day, remaining, mark }`） |
-| `bookings` | 予約（確認画面の確定で作成、`availability` を1減算） |
-| `users` / `messages` | STEP6 以降 |
+| `bookings` | 予約（確認画面の確定で作成、`availability` を1減算）。`userId` 付きで、`/orders`・`/mypage` は本人予約を表示 |
+| `surveys` | リフォーム現地調査の申し込み（`/reform/survey` で作成） |
+| `users` / `messages` | 今後 |
+
+> `/orders`・`/mypage` はログイン中ユーザーの実データを表示します（Firebase 未設定時はサンプル表示）。`firestore.rules` で `bookings` の読み取りは `userId == request.auth.uid` の本人のみに限定。
 
 キーがプレースホルダー（`YOUR_...`）のままでも、`/booking/date` はサンプル空き枠で表示され、`/booking/confirm` は決定的な予約番号でフローが完結します（Firestore へは書き込みません）。
 

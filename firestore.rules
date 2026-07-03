@@ -19,13 +19,14 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
-    // 予約：ゲスト作成可（氏名・電話必須）。読み取り/更新は STEP6 で本人/管理に限定
+    // 予約：ゲスト作成可（氏名・電話必須）。読み取りは本人（userId==uid）のみ。
     match /bookings/{id} {
       allow create: if request.resource.data.customer.name is string
                     && request.resource.data.customer.name.size() > 0
                     && request.resource.data.customer.tel is string
                     && request.resource.data.customer.tel.size() > 0;
-      allow read, update, delete: if false;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // 現地調査申し込み：ゲスト作成可（氏名・電話必須）

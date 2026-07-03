@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Calendar, MapPin, ChevronRight, FileText, HelpCircle,
 } from "lucide-react";
@@ -9,6 +10,10 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import Photo from "@/components/Photo";
 import AuthGuard from "@/components/AuthGuard";
+import { Loading, Empty, ErrorState } from "@/components/states";
+import { useAuth } from "@/context/AuthContext";
+import { fetchUserBookings, type BookingDoc } from "@/lib/firestore";
+import { getService } from "@/lib/pricing";
 
 /**
  * RE:TERA HOME — 予約・注文一覧
@@ -21,15 +26,55 @@ const ORDERS = [
 ];
 const TABS = ["すべて", "予約中", "完了", "キャンセル"];
 
-function OrdersInner() {
-  const [tab, setTab] = useState(0);
-  const counts: Record<string, number> = {
-    すべて: ORDERS.length,
-    予約中: ORDERS.filter((o) => o.status === "予約中").length,
-    完了: ORDERS.filter((o) => o.status === "完了").length,
-    キャンセル: 0,
+interface OrderView {
+  status: string; img: string; title: string; date: string;
+  addr: string; price: string; state: string; action: string;
+}
+
+// Firestore の予約ドキュメント → 一覧カードの表示形へ（クリーニング=税込 / リフォーム=税抜参考）
+const toView = (b: BookingDoc): OrderView => {
+  const isReform = b.reform != null && b.reform.items.length > 0;
+  const svc = getService(b.serviceId);
+  const status = b.status === "completed" ? "完了" : b.status === "cancelled" ? "キャンセル" : "予約中";
+  return {
+    status,
+    img: isReform ? "cloth" : svc?.img ?? "",
+    title: isReform ? `リフォーム工事 × ${b.reform!.items.length}件` : svc?.title ?? b.serviceId,
+    date: b.dateLabel,
+    addr: [b.customer?.addr, b.customer?.building].filter(Boolean).join(" "),
+    price: (b.totalIncl ?? 0).toLocaleString("ja-JP"),
+    state: status === "完了" ? "作業完了" : status === "キャンセル" ? "キャンセル" : "予約確定",
+    action: status === "完了" ? "領収書" : "日程変更",
   };
-  const list = tab === 0 ? ORDERS : ORDERS.filter((o) => o.status === TABS[tab]);
+};
+
+function OrdersInner() {
+  const router = useRouter();
+  const { user, configured } = useAuth();
+  const [tab, setTab] = useState(0);
+  const [real, setReal] = useState<OrderView[] | null>(null);
+  const [loading, setLoading] = useState(configured);
+  const [error, setError] = useState(false);
+
+  const load = () => {
+    if (!configured || !user) { setLoading(false); return; }
+    setLoading(true);
+    setError(false);
+    fetchUserBookings(user.uid)
+      .then((rows) => { setReal((rows ?? []).map(toView)); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
+  useEffect(load, [configured, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 未設定時はサンプル（デザイン確認用）。設定時は本人の実データ。
+  const source = configured ? real ?? [] : ORDERS;
+  const counts: Record<string, number> = {
+    すべて: source.length,
+    予約中: source.filter((o) => o.status === "予約中").length,
+    完了: source.filter((o) => o.status === "完了").length,
+    キャンセル: source.filter((o) => o.status === "キャンセル").length,
+  };
+  const list = tab === 0 ? source : source.filter((o) => o.status === TABS[tab]);
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -50,6 +95,13 @@ function OrdersInner() {
           ))}
         </div>
 
+        {configured && loading ? (
+          <Loading label="予約を読み込み中" />
+        ) : configured && error ? (
+          <ErrorState onRetry={load} />
+        ) : source.length === 0 ? (
+          <Empty preset="orders" onCta={() => router.push("/services")} />
+        ) : (
         <div className="rt-orders">
           {list.map((o, i) => (
             <div className="rt-order" key={i}>
@@ -79,6 +131,7 @@ function OrdersInner() {
             </div>
           ))}
         </div>
+        )}
 
         <div className="rt-help">
           <div className="rt-help-ico"><HelpCircle size={30} strokeWidth={2} /></div>

@@ -6,6 +6,7 @@ import {
   ArrowLeft, Check, AlertCircle, Search, Camera, X, Calendar, ChevronRight, Info,
 } from "lucide-react";
 import { useReform, needsInput, valLabel } from "@/context/ReformContext";
+import { useAuth } from "@/context/AuthContext";
 import { createSurveyRequest } from "@/lib/firestore";
 
 /**
@@ -28,6 +29,7 @@ type Pref = { date: string; time: string };
 export default function SurveyRequest() {
   const router = useRouter();
   const { rows, net, clear } = useReform();
+  const { user } = useAuth();
 
   const summaryItems = rows.length
     ? rows.map((r) => `${r.item.title} ${needsInput(r.item) ? `${r.val}${valLabel(r.item)}` : r.item.method === "set" ? "1台" : "1式"}`)
@@ -66,6 +68,7 @@ export default function SurveyRequest() {
         customer: f,
         prefs,
         photoCount: photos.length,
+        userId: user?.uid ?? null,
       });
       clear();
     } catch {
