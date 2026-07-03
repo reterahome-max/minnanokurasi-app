@@ -29,9 +29,9 @@ const FILTERS: { label: string; icon: typeof Layers | null }[] = [
 const ITEMS = [
   { id: "cloth_std",     cat: "クロス", title: "量産クロス貼り替え",            desc: "お部屋の印象を一新",             priceLabel: "980",     unit: "円/㎡",   img: "cloth",  survey: true },
   { id: "cloth_high",    cat: "クロス", title: "ハイグレードクロス貼り替え",    desc: "上質な質感・機能性クロス",       priceLabel: "1,200",   unit: "円/㎡〜", img: "cloth",  survey: true },
-  { id: "cf_room",       cat: "床",     title: "CF貼り替え",                    desc: "水回りにも強いクッションフロア", priceLabel: "2,000",   unit: "円/㎡〜", img: "floor",  survey: true },
+  { id: "cf_room",       cat: "床",     title: "CF貼り替え",                    desc: "水回りにも強いクッションフロア", priceLabel: "2,000",   unit: "円/㎡〜", img: "cf",     survey: true },
   { id: "fl_room",       cat: "床",     title: "フローリング貼り替え",          desc: "傷んだ床を美しく",               priceLabel: "10,000",  unit: "円/㎡",   img: "floor",  survey: true },
-  { id: "ft_room",       cat: "床",     title: "フロアタイル貼り替え",          desc: "重ね貼りで手軽にリフレッシュ",   priceLabel: "4,000",   unit: "円/㎡〜", img: "floor",  survey: true },
+  { id: "ft_room",       cat: "床",     title: "フロアタイル貼り替え",          desc: "重ね貼りで手軽にリフレッシュ",   priceLabel: "4,000",   unit: "円/㎡〜", img: "ftile",  survey: true },
   { id: "door_lever",    cat: "建具",   title: "室内ドアハンドル交換",          desc: "握り玉・レバー各種",             priceLabel: "9,000",   unit: "円/箇所", img: "door",   survey: false },
   { id: "net_window",    cat: "建具",   title: "網戸張り替え",                  desc: "窓用・ベランダ用に対応",         priceLabel: "3,000",   unit: "円/枚〜", img: "net",    survey: false },
   { id: "toilet_toto_qr",cat: "水回り", title: "トイレ交換（TOTO ピュアレストQR）", desc: "材料・標準施工込み",         priceLabel: "130,000", unit: "円〜",    img: "toilet", survey: true },

@@ -59,9 +59,11 @@ const priceView = (it: ReformItem): { label: string; value: string; unit: string
   }
 };
 
-// サムネのキー（一覧と同じ対応）
+// サムネのキー（一覧と同じ対応）。床は工事種別ごとに個別写真。
 const imgOf = (it: ReformItem) =>
-  it.cat === "クロス" ? "cloth" : it.cat === "床" ? "floor" : it.cat === "水回り" ? "toilet"
+  it.cat === "クロス" ? "cloth"
+  : it.cat === "床" ? (it.id === "cf_room" ? "cf" : it.id === "ft_room" ? "ftile" : "floor")
+  : it.cat === "水回り" ? "toilet"
   : it.cat === "補修" ? "patch" : it.id.startsWith("net") ? "net" : "door";
 
 // 工事アイテム別の実写真ビフォーアフター（未掲載アイテムは欄ごと非表示）

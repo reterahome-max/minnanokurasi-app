@@ -20,7 +20,9 @@ export const IMAGES: Record<string, string> = {
   vacancy: "/images/ba_vacancy_after.jpg",
   // リフォーム サムネ
   cloth: "/images/ba_cloth_after.jpg",
-  floor: "/images/ba_floor_after.jpg",
+  floor: "/images/ba_floor_after.jpg", // フローリング
+  cf: "/images/ba_cf_after.jpg", // CF（クッションフロア）
+  ftile: "/images/ba_ftile_after.jpg", // フロアタイル
   door: "",
   net: "/images/ba_net_after.jpg",
   patch: "",
