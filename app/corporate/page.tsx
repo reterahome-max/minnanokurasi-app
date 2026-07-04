@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Building2, FileText, Users, Percent, ClipboardList, Phone, Check, ChevronRight,
   ChevronLeft, ChevronDown, RefreshCw, CalendarClock, Wallet, Layers, Calculator, Crown,
-  Sparkles, Grid3x3, DoorOpen, Droplets, Zap, Wrench, ShieldCheck,
+  Sparkles, Grid3x3, DoorOpen, Droplets, Zap, Wrench, Camera, MapPin, Handshake,
 } from "lucide-react";
 import Photo from "@/components/Photo";
 import BeforeAfter from "@/components/BeforeAfter";
@@ -110,40 +110,31 @@ export default function CorporateHome() {
         {/* 個人 / 法人 切り替え（リンク型・SEO安全） */}
         <AudienceTabs active="corporate" />
 
-        {/* ヒーロー */}
-        <section className="rt-hero">
-          <div className="rt-hero-photo">
-            <Photo srcKey="vacancy" alt="越谷市・春日部市の賃貸物件の原状回復" priority />
+        {/* ヒーロー（法人向け・デザイン参考に準拠） */}
+        <section className="rt-chero">
+          <div className="rt-chero-eyebrow">＼ 法人・管理会社様向け ／</div>
+          <h1 className="rt-chero-h1">原状回復工事を<br />まとめて<span className="rt-chero-accent">スマート</span>に。</h1>
+          <p className="rt-chero-sub">空室クリーニング・クロス・床・小修繕まで。<br />RE:TERA HOMEが、原状回復をまとめてサポートします。</p>
+
+          <div className="rt-chero-pills">
+            <Link href="/corporate/restoration" className="rt-chero-pill"><span className="rt-cpill-ico i-navy"><Building2 size={15} strokeWidth={2.5} /></span>原状回復工事</Link>
+            <Link href="/corporate/restoration/simulator" className="rt-chero-pill"><span className="rt-cpill-ico i-teal"><Sparkles size={15} strokeWidth={2.5} /></span>空室クリーニング</Link>
+            <Link href="/corporate/restoration/simulator" className="rt-chero-pill"><span className="rt-cpill-ico i-orange"><Wrench size={15} strokeWidth={2.5} /></span>小修繕</Link>
           </div>
-          <div className="rt-hero-inner">
-            <div className="rt-hero-ribbon">＼ 越谷市・春日部市の管理会社・オーナー様へ ／</div>
-            <h1 className="rt-hero-h1">賃貸の<span className="rt-hero-red">原状回復</span>を、<br />まるごとおまかせ。</h1>
-            <p className="rt-hero-sub">空室クリーニング・クロス・床・設備の原状回復を<br />ワンストップで対応します。</p>
-            <div className="rt-hero-cats">
-              <Link href="/corporate/restoration" className="rt-hero-cat">
-                <span className="rt-hero-cat-img"><Photo srcKey="vacancy" alt="原状回復" /></span>原状回復
-              </Link>
-              <Link href="/corporate/restoration/simulator" className="rt-hero-cat">
-                <span className="rt-hero-cat-img"><Photo srcKey="bath" alt="空室クリーニング" /></span>空室清掃
-              </Link>
-              <Link href="/corporate/contact" className="rt-hero-cat">
-                <span className="rt-hero-cat-img"><Photo srcKey="ac" alt="定期プラン" /></span>定期プラン
-              </Link>
+
+          <div className="rt-chero-media">
+            <div className="rt-chero-photo"><Photo srcKey="vacancy" alt="越谷市・春日部市の賃貸物件の原状回復" priority /></div>
+            <div className="rt-chero-circles">
+              <div className="rt-chero-circle"><span className="rt-ccircle-img"><Photo srcKey="hero" alt="現地確認" /></span>現地確認</div>
+              <div className="rt-chero-circle"><span className="rt-ccircle-img"><Photo srcKey="floor" alt="原状回復" /></span>原状回復</div>
+              <div className="rt-chero-circle"><span className="rt-ccircle-img"><Photo srcKey="kitchen" alt="空室清掃" /></span>空室清掃</div>
             </div>
-            <div className="rt-trust">
-              <div className="rt-trust-card">
-                <div className="rt-trust-ico"><FileText size={18} strokeWidth={2.6} /></div>
-                <div><div className="rt-trust-t">請求書・後払い</div><div className="rt-trust-d">月締め請求書払いに対応</div></div>
-              </div>
-              <div className="rt-trust-card">
-                <div className="rt-trust-ico"><Building2 size={18} strokeWidth={2.6} /></div>
-                <div><div className="rt-trust-t">複数物件を一括</div><div className="rt-trust-d">戸数が多くてもまとめて対応</div></div>
-              </div>
-              <div className="rt-trust-card">
-                <div className="rt-trust-ico"><ShieldCheck size={18} strokeWidth={2.6} /></div>
-                <div><div className="rt-trust-t">損害保険加入</div><div className="rt-trust-d">万が一の時も安心</div></div>
-              </div>
-            </div>
+          </div>
+
+          <div className="rt-chero-trust">
+            <div className="rt-ctrust"><span className="rt-ctrust-ico"><Handshake size={18} strokeWidth={2.3} /></span><div><b>一括対応</b><span>清掃・内装・小修繕までまとめて依頼可能</span></div></div>
+            <div className="rt-ctrust"><span className="rt-ctrust-ico"><Camera size={18} strokeWidth={2.3} /></span><div><b>写真付き完了報告</b><span>施工後の報告もわかりやすく共有</span></div></div>
+            <div className="rt-ctrust"><span className="rt-ctrust-ico"><MapPin size={18} strokeWidth={2.3} /></span><div><b>越谷市・春日部市対応</b><span>地域密着で迅速に対応</span></div></div>
           </div>
         </section>
 
@@ -395,6 +386,28 @@ const navyExtra = `
 .rt-mini-header{display:flex;align-items:center;gap:9px;padding:14px 2px;}
 .rt-back{background:none;border:none;color:var(--ink);cursor:pointer;display:flex;padding:2px;flex:none;}
 .rt-mini-title{font-size:18px;font-weight:900;}
+/* 法人ヒーロー（デザイン参考に準拠） */
+.rt-chero{background:linear-gradient(180deg,#EDF1F5,#fff 72%);border:1px solid var(--line);border-radius:18px;padding:20px 16px 18px;margin-bottom:14px;box-shadow:var(--shadow);}
+.rt-chero-eyebrow{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:9px;}
+.rt-chero-h1{font-size:29px;font-weight:900;line-height:1.24;color:var(--navy);letter-spacing:.01em;margin:0 0 11px;}
+.rt-chero-accent{color:#EF7C00;}
+.rt-chero-sub{font-size:12.5px;font-weight:600;line-height:1.7;color:var(--ink-2);margin:0 0 15px;}
+.rt-chero-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.rt-chero-pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px 6px 6px;font-size:12.5px;font-weight:800;color:var(--navy);text-decoration:none;box-shadow:var(--shadow);}
+.rt-cpill-ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;flex:none;}
+.rt-cpill-ico.i-navy{background:var(--navy);}
+.rt-cpill-ico.i-teal{background:#12B0A0;}
+.rt-cpill-ico.i-orange{background:#EF7C00;}
+.rt-chero-media{margin-bottom:18px;}
+.rt-chero-photo{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:16/10;box-shadow:var(--shadow);}
+.rt-chero-circles{display:flex;justify-content:center;gap:16px;margin-top:-30px;position:relative;z-index:2;}
+.rt-chero-circle{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--navy);}
+.rt-ccircle-img{width:64px;height:64px;border-radius:50%;overflow:hidden;border:3px solid #fff;box-shadow:var(--shadow-md);position:relative;display:block;}
+.rt-chero-trust{display:flex;flex-direction:column;gap:8px;}
+.rt-ctrust{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 13px;box-shadow:var(--shadow);}
+.rt-ctrust-ico{flex:none;width:38px;height:38px;border-radius:50%;border:2px dotted #EF7C00;color:#EF7C00;display:flex;align-items:center;justify-content:center;}
+.rt-ctrust b{display:block;font-size:13px;font-weight:900;color:var(--navy);margin-bottom:2px;}
+.rt-ctrust span{font-size:11px;color:var(--ink-2);font-weight:600;line-height:1.45;}
 .rt-merits{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
 .rt-merit{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px;box-shadow:var(--shadow);}
 .rt-merit-ico{width:44px;height:44px;border-radius:12px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
