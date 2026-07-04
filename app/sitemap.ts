@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/works`, priority: 0.8 },
     { url: `${base}/guide`, priority: 0.7 },
     { url: `${base}/corporate`, priority: 0.6 },
+    { url: `${base}/corporate/restoration`, priority: 0.6 },
     { url: `${base}/legal`, priority: 0.4 },
   ];
 

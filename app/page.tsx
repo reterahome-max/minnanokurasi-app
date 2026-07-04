@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
+import AudienceTabs from "@/components/AudienceTabs";
 import Photo from "@/components/Photo";
 import BeforeAfter from "@/components/BeforeAfter";
 import { getService, calcBill, serviceGroups, groupForService, num, CATEGORIES as CATS } from "@/lib/pricing";
@@ -200,6 +201,9 @@ export default function RETERAHome() {
 
       <div className="rt-shell">
         <Header />
+
+        {/* 個人 / 法人 切り替え（リンク型・SEO安全） */}
+        <AudienceTabs active="personal" />
 
         {/* エリア検索 */}
         <div className="rt-area-row">

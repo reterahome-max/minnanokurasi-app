@@ -6,6 +6,7 @@ import {
   RefreshCw, CalendarClock, Wallet, Layers,
 } from "lucide-react";
 import Photo from "@/components/Photo";
+import AudienceTabs from "@/components/AudienceTabs";
 import { COMPANY } from "@/lib/company";
 
 /**
@@ -39,6 +40,8 @@ export default function CorporateLanding() {
           <Link href="/" className="rt-back"><ArrowLeft size={22} strokeWidth={2.4} /></Link>
           <div className="rt-mini-title">法人・管理会社の方へ</div>
         </header>
+
+        <AudienceTabs active="corporate" />
 
         <div className="rt-hero">
           <div className="rt-hero-photo"><Photo srcKey="hero" alt="法人向けクリーニング" /></div>
@@ -91,9 +94,9 @@ export default function CorporateLanding() {
 
         <div className="rt-sec-h">法人メニュー</div>
         <div className="rt-cmenu">
-          <Link href="/corporate/restoration/simulator" className="rt-cmenu-row">
+          <Link href="/corporate/restoration" className="rt-cmenu-row">
             <div className="rt-cmenu-ico"><ClipboardList size={20} strokeWidth={2.1} /></div>
-            <div className="rt-cmenu-body"><div className="rt-cmenu-t">原状回復シミュレーター</div><div className="rt-cmenu-d">施工メニューをまとめて選んで概算・見積依頼</div></div>
+            <div className="rt-cmenu-body"><div className="rt-cmenu-t">原状回復・退去後清掃</div><div className="rt-cmenu-d">対応範囲の紹介と、概算がわかる見積シミュレーター</div></div>
             <ChevronRight size={18} strokeWidth={2.4} className="rt-cmenu-cv" />
           </Link>
           <Link href="/corporate/contact" className="rt-cmenu-row">

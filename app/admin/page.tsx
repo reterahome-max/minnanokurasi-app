@@ -13,8 +13,9 @@ import { SkeletonList, ErrorState } from "@/components/states";
 import { useAuth } from "@/context/AuthContext";
 import { isAdminEmail } from "@/lib/admin";
 import {
-  fetchAllBookings, fetchAllSurveys, fetchAllCorporateInquiries, subscribeAllMessages, sendMessage,
-  type BookingDoc, type SurveyDoc, type CorporateInquiryDoc, type ChatMessage,
+  fetchAllBookings, fetchAllSurveys, fetchAllCorporateInquiries, fetchAllRestorationEstimates,
+  subscribeAllMessages, sendMessage,
+  type BookingDoc, type SurveyDoc, type CorporateInquiryDoc, type RestorationEstimateDoc, type ChatMessage,
 } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
 import { COMPANY } from "@/lib/company";
@@ -69,6 +70,20 @@ const SAMPLE_CORP: CorporateInquiryDoc[] = [
     note: "退去のたびにまとめて依頼したい。月末に集中しがち。",
   },
 ];
+const SAMPLE_REST: RestorationEstimateDoc[] = [
+  {
+    id: "r1", status: "requested", createdAtMs: Date.now() - 2000_000,
+    company: "越谷不動産管理 株式会社", name: "管理 一郎", tel: "048-000-0000", email: "kanri@example.co.jp",
+    property: { propertyName: "サンハイツ越谷", roomNumber: "203", floorPlan: "1LDK", floorArea: "45", dueDate: "2026-07-20", note: "" },
+    items: [
+      { name: "空室クリーニング 1LDK・2DK（45㎡まで）", unit: "一式", qty: 1, location: "全体", subtotal: 40000, tier: "auto" },
+      { name: "量産クロス（数量で自動判定 980/1,200円）", unit: "㎡", qty: 52, location: "LDK・洋室", subtotal: 50960, tier: "auto" },
+      { name: "標準トイレ交換", unit: "一式", qty: 1, location: "トイレ", subtotal: 130000, tier: "photo" },
+    ],
+    adjustments: ["night"],
+    totals: { autoSubtotal: 90960, photoSubtotal: 130000, photoCount: 1, siteCount: 0, minAdjustment: 0, overhead: 4548, optionTotal: 18192, preTax: 113700, tax: 11370, total: 125070 },
+  },
+];
 const SAMPLE_MSGS: ChatMessage[] = [
   { id: "m1", threadId: "u1", sender: "user", text: "エアコンの予約日を1日ずらせますか？", userName: "越谷 太郎", createdAtMs: Date.now() - 7200_000 },
   { id: "m2", threadId: "u1", sender: "admin", text: "ご連絡ありがとうございます。翌日13:00〜で空きがございます。", userName: "RE:TERA HOME", createdAtMs: Date.now() - 7000_000 },
@@ -93,10 +108,11 @@ function AdminInner() {
   const { user, configured } = useAuth();
   const admin = !configured || isAdminEmail(user?.email);
 
-  const [tab, setTab] = useState<"bookings" | "surveys" | "corp" | "messages">("bookings");
+  const [tab, setTab] = useState<"bookings" | "surveys" | "corp" | "rest" | "messages">("bookings");
   const [bk, setBk] = useState<BookingDoc[] | null>(null);
   const [sv, setSv] = useState<SurveyDoc[] | null>(null);
   const [corp, setCorp] = useState<CorporateInquiryDoc[] | null>(null);
+  const [rest, setRest] = useState<RestorationEstimateDoc[] | null>(null);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [selThread, setSelThread] = useState<string | null>(null);
   const [reply, setReply] = useState("");
@@ -150,11 +166,11 @@ function AdminInner() {
   };
 
   const load = () => {
-    if (!configured) { setBk(SAMPLE_BK); setSv(SAMPLE_SV); setCorp(SAMPLE_CORP); setLoading(false); return; }
+    if (!configured) { setBk(SAMPLE_BK); setSv(SAMPLE_SV); setCorp(SAMPLE_CORP); setRest(SAMPLE_REST); setLoading(false); return; }
     if (!admin) { setLoading(false); return; }
     setLoading(true); setError(false);
-    Promise.all([fetchAllBookings(), fetchAllSurveys(), fetchAllCorporateInquiries()])
-      .then(([b, s, c]) => { setBk(b ?? []); setSv(s ?? []); setCorp(c ?? []); setLoading(false); })
+    Promise.all([fetchAllBookings(), fetchAllSurveys(), fetchAllCorporateInquiries(), fetchAllRestorationEstimates()])
+      .then(([b, s, c, r]) => { setBk(b ?? []); setSv(s ?? []); setCorp(c ?? []); setRest(r ?? []); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   };
   useEffect(load, [configured, user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -191,6 +207,10 @@ function AdminInner() {
               <button className={"rt-adm-stat" + (tab === "corp" ? " on" : "")} onClick={() => { setTab("corp"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><Building2 size={18} strokeWidth={2.2} /></div>
                 <div><div className="rt-adm-stat-n">{corp?.length ?? "—"}</div><div className="rt-adm-stat-l">法人</div></div>
+              </button>
+              <button className={"rt-adm-stat" + (tab === "rest" ? " on" : "")} onClick={() => { setTab("rest"); setSelThread(null); }}>
+                <div className="rt-adm-stat-ico"><Wrench size={18} strokeWidth={2.2} /></div>
+                <div><div className="rt-adm-stat-n">{rest?.length ?? "—"}</div><div className="rt-adm-stat-l">原状回復</div></div>
               </button>
               <button className={"rt-adm-stat" + (tab === "messages" ? " on" : "")} onClick={() => { setTab("messages"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><MessageSquare size={18} strokeWidth={2.2} />{unreadThreads > 0 && <span className="rt-adm-dot" />}</div>
@@ -307,7 +327,7 @@ function AdminInner() {
                   })}
                 </div>
               ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />まだ見積依頼はありません</div>
-            ) : (
+            ) : tab === "corp" ? (
               (corp && corp.length > 0) ? (
                 <div className="rt-adm-list">
                   {corp.map((c) => (
@@ -332,6 +352,32 @@ function AdminInner() {
                   ))}
                 </div>
               ) : <div className="rt-adm-empty"><Building2 size={26} strokeWidth={1.8} />まだ法人問い合わせはありません</div>
+            ) : (
+              (rest && rest.length > 0) ? (
+                <div className="rt-adm-list">
+                  {rest.map((r) => (
+                    <div className="rt-adm-card" key={r.id}>
+                      <div className="rt-adm-head">
+                        <span className="rt-adm-tag t-rest">原状回復</span>
+                        <span className="rt-adm-recv">受付 {recvLabel(r.createdAtMs)}</span>
+                      </div>
+                      <div className="rt-adm-title">{r.company}</div>
+                      <div className="rt-adm-sub">{[r.property.propertyName, r.property.roomNumber, r.property.floorPlan].filter(Boolean).join(" ")}{r.property.floorArea ? `／${r.property.floorArea}㎡` : ""}</div>
+                      <div className="rt-adm-rows">
+                        <Row icon={User}>{r.name} 様</Row>
+                        <Row icon={Phone} href={`tel:${r.tel}`}>{r.tel}</Row>
+                        {r.email && <Row icon={Mail} href={`mailto:${r.email}`}>{r.email}</Row>}
+                        {r.property.dueDate && <Row icon={CalendarClock}>希望完了：{r.property.dueDate}</Row>}
+                        <Row icon={Wrench}>{r.items.length}項目（写真確認{r.totals.photoCount}／別途{r.totals.siteCount}）：{r.items.slice(0, 6).map((it) => `${it.name}${it.location ? `（${it.location}）` : ""} ${it.qty}${it.unit}`).join(" ・ ")}{r.items.length > 6 ? " …" : ""}</Row>
+                      </div>
+                      <div className="rt-adm-foot">
+                        <span>概算（税抜／税込）</span>
+                        <span className="rt-adm-price">{yen(r.totals.preTax)}<b>円</b> <span className="rt-adm-price-tax">/ 税込{yen(r.totals.total)}円</span></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />まだ原状回復見積はありません</div>
             )}
           </>
         )}
@@ -401,6 +447,8 @@ const styles = `
 .t-cancel{background:var(--ink-3);}
 .t-survey{background:var(--gold);}
 .t-corp{background:var(--navy);}
+.t-rest{background:var(--navy-2);}
+.rt-adm-price-tax{font-size:11px;font-weight:800;color:var(--ink-3);}
 .rt-adm-plan{margin-left:8px;font-size:10.5px;font-weight:800;color:var(--navy);background:var(--blue-soft);padding:2px 8px;border-radius:6px;vertical-align:middle;}
 .rt-adm-no{font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.02em;}
 .rt-adm-recv{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ink-3);}
