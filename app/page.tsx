@@ -400,6 +400,7 @@ export default function RETERAHome() {
             <div className="rt-cmp-hint"><ChevronLeft size={13} strokeWidth={2.6} />つまみを左右にドラッグして比較<ChevronRight size={13} strokeWidth={2.6} /></div>
             <Link href={ba.id ? `/services/${ba.id}` : "/services"} className="rt-ba-link">このサービスを見る <ChevronRight size={15} strokeWidth={2.6} /></Link>
           </div>
+          <Link href="/works" className="rt-ba-more">施工事例をもっと見る（ビフォーアフター）<ChevronRight size={16} strokeWidth={2.6} /></Link>
         </section>
 
         {/* ⑥ ご利用の流れ */}
@@ -481,12 +482,14 @@ export default function RETERAHome() {
 
       {/* 固定フッター */}
       <div className="rt-bottom">
-        <Link href="/simulator" className="rt-book">
-          <Calendar size={20} strokeWidth={2.3} />
-          <span className="rt-book-sub">ご予約・ご相談はこちらから</span>
-          <span className="rt-book-main">今すぐ予約する</span>
-          <ChevronRight size={20} strokeWidth={2.6} className="rt-book-cv" />
-        </Link>
+        <div className="rt-cta2">
+          <a href={`tel:${COMPANY.tel.replace(/[^0-9+]/g, "")}`} className="rt-cta2-tel">
+            <Phone size={19} strokeWidth={2.4} /><span>お電話で相談</span>
+          </a>
+          <Link href="/simulator" className="rt-cta2-book">
+            <Calendar size={19} strokeWidth={2.4} /><span>今すぐ予約する</span><ChevronRight size={18} strokeWidth={2.6} />
+          </Link>
+        </div>
         <BottomNav active="home" />
       </div>
     </div>
@@ -627,6 +630,8 @@ const styles = `
 .rt-ba-before{background:rgba(40,44,48,.82);}
 .rt-ba-after{background:var(--red);}
 .rt-ba-link{display:inline-flex;align-items:center;gap:3px;background:none;border:none;color:var(--red);font-size:13px;font-weight:800;cursor:pointer;padding:0;text-decoration:none;}
+.rt-ba-more{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;background:#fff;border:1.5px solid var(--red);border-radius:12px;padding:13px;font-size:13.5px;font-weight:800;color:var(--red);text-decoration:none;}
+.rt-ba-more:hover{background:var(--red-soft);}
 
 /* flow */
 .rt-flow-sec{margin-bottom:20px;}
@@ -684,10 +689,11 @@ const styles = `
 .rt-footer-note{font-size:11px;color:var(--ink-3);font-weight:600;line-height:1.6;margin-bottom:6px;}
 .rt-footer-copy{font-size:10.5px;color:var(--ink-3);font-weight:600;}
 
-/* bottom booking bar */
-.rt-book{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;border:none;padding:15px 14px;font-size:15px;cursor:pointer;box-shadow:0 -3px 14px rgba(20,28,38,.08);text-decoration:none;}
-.rt-book:hover{background:var(--red-deep);}
-.rt-book-sub{font-size:12px;font-weight:700;opacity:.92;}
-.rt-book-main{font-size:17px;font-weight:900;letter-spacing:.03em;}
-.rt-book-cv{margin-left:2px;}
+/* bottom CTA（電話 / 予約 の2分割） */
+.rt-cta2{display:grid;grid-template-columns:1fr 1fr;box-shadow:0 -3px 14px rgba(20,28,38,.08);}
+.rt-cta2 a{display:flex;align-items:center;justify-content:center;gap:6px;padding:15px 8px;font-size:15px;font-weight:900;letter-spacing:.02em;text-decoration:none;}
+.rt-cta2 a svg{flex:none;}
+.rt-cta2-tel{background:#fff;color:var(--red);border-top:2.5px solid var(--red);}
+.rt-cta2-book{background:var(--red);color:#fff;}
+.rt-cta2-book:hover{background:var(--red-deep);}
 `;
