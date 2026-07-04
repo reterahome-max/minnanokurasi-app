@@ -91,6 +91,11 @@ export default function CorporateLanding() {
 
         <div className="rt-sec-h">法人メニュー</div>
         <div className="rt-cmenu">
+          <Link href="/corporate/restoration/simulator" className="rt-cmenu-row">
+            <div className="rt-cmenu-ico"><ClipboardList size={20} strokeWidth={2.1} /></div>
+            <div className="rt-cmenu-body"><div className="rt-cmenu-t">原状回復シミュレーター</div><div className="rt-cmenu-d">施工メニューをまとめて選んで概算・見積依頼</div></div>
+            <ChevronRight size={18} strokeWidth={2.4} className="rt-cmenu-cv" />
+          </Link>
           <Link href="/corporate/contact" className="rt-cmenu-row">
             <div className="rt-cmenu-ico"><Layers size={20} strokeWidth={2.1} /></div>
             <div className="rt-cmenu-body"><div className="rt-cmenu-t">複数物件をまとめて依頼</div><div className="rt-cmenu-d">物件を何件でも追加して一括でお申し込み</div></div>

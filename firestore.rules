@@ -132,6 +132,27 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 原状回復見積依頼：ゲスト作成可（会社名・担当・電話 必須＋明細/合計の型）。読み取りは管理者のみ。
+    match /restorationEstimates/{id} {
+      allow create: if request.resource.data.company is string
+                    && request.resource.data.company.size() > 0
+                    && request.resource.data.company.size() <= 100
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 60
+                    && request.resource.data.tel is string
+                    && request.resource.data.tel.size() >= 10
+                    && request.resource.data.tel.size() <= 20
+                    && strOk(request.resource.data.email, 254)
+                    && request.resource.data.items is list
+                    && request.resource.data.items.size() <= 100
+                    && request.resource.data.totals.total is int
+                    && request.resource.data.totals.total >= 0
+                    && request.resource.data.totals.total <= 100000000;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // ユーザープロフィール：本人のみ読み書き
     match /users/{uid} {
       allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();

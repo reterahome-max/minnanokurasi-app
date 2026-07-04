@@ -320,6 +320,55 @@ export async function fetchAllCorporateInquiries(): Promise<CorporateInquiryDoc[
   return rows;
 }
 
+/* ───────── 法人 原状回復 見積依頼 ───────── */
+export interface RestorationEstimatePayload {
+  company: string;
+  name: string;   // 担当者
+  tel: string;
+  email: string;
+  property: { propertyName: string; roomNumber: string; floorPlan: string; floorArea: string; dueDate: string; note: string };
+  items: { name: string; unit: string; qty: number; location: string; subtotal: number | null; tier: string }[];
+  adjustments: string[];
+  totals: { autoSubtotal: number; photoSubtotal: number; photoCount: number; siteCount: number; minAdjustment: number; overhead: number; optionTotal: number; preTax: number; tax: number; total: number };
+}
+export interface RestorationEstimateDoc extends RestorationEstimatePayload {
+  id: string;
+  status: string;
+  createdAtMs: number;
+}
+
+/** 原状回復の見積依頼を1件作成（ゲスト可）。未設定時は書き込みせずフロー継続。 */
+export async function createRestorationEstimate(payload: RestorationEstimatePayload): Promise<{ id: string }> {
+  const db = getDb();
+  if (!db) return { id: "local-rest" };
+  const ref = await addDoc(collection(db, "restorationEstimates"), {
+    ...payload,
+    status: "requested",
+    createdAt: serverTimestamp(),
+  });
+  return { id: ref.id };
+}
+
+/** 【管理者用】原状回復見積を全件取得（新しい順）。 */
+export async function fetchAllRestorationEstimates(): Promise<RestorationEstimateDoc[] | null> {
+  const db = getDb();
+  if (!db) return null;
+  const snap = await getDocs(collection(db, "restorationEstimates"));
+  const rows: RestorationEstimateDoc[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const ts = data.createdAt as { toMillis?: () => number } | undefined;
+    rows.push({
+      id: d.id,
+      ...(data as unknown as RestorationEstimatePayload),
+      status: (data.status as string) ?? "requested",
+      createdAtMs: ts?.toMillis?.() ?? 0,
+    });
+  });
+  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return rows;
+}
+
 /* ───────── メッセージ（顧客↔管理者チャット） ─────────
  * 1スレッド = 顧客の uid（threadId）。sender は 'user' | 'admin'。
  * 読み書き可否は firestore.rules（本人スレッド or 管理者）が最終判定。 */
