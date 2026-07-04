@@ -330,6 +330,7 @@ export default function RETERAHome() {
         </section>
 
         {/* ③ カテゴリ */}
+        <h2 className="rt-cats-h">カテゴリから選ぶ</h2>
         <div className="rt-cats">
           {CATEGORIES.map((c, i) => {
             const Icon = c.icon;
@@ -573,6 +574,7 @@ const styles = `
 .rt-slot-btn{flex:none;display:flex;align-items:center;gap:2px;background:#fff;border:1.5px solid var(--red);color:var(--red);font-size:11.5px;font-weight:800;border-radius:10px;padding:8px 10px;cursor:pointer;line-height:1.25;text-align:left;text-decoration:none;}
 
 /* categories */
+.rt-cats-h{font-size:17px;font-weight:900;letter-spacing:.01em;margin:4px 0 11px;}
 .rt-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .rt-cats::-webkit-scrollbar{display:none;}
 .rt-cat{flex:none;width:62px;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--ink-2);font-size:11px;font-weight:700;padding:6px 2px;border-bottom:2.5px solid transparent;}
