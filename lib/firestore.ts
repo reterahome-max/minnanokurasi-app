@@ -132,6 +132,9 @@ export async function createBooking(
       ...payload,
       bookingNo,
       status: "confirmed",
+      // 前日リマインド(cron)が日付で抽出するためのキー。二重送信防止フラグは送信時に付与。
+      dateKey: dateKey(payload.year, payload.month, payload.day),
+      reminderSent: false,
       createdAt: serverTimestamp(),
     });
   });
