@@ -12,7 +12,7 @@ import { getService, optionsFor, calcBill, num } from "@/lib/pricing";
 import { getReformItem, quote } from "@/lib/reformPricing";
 import { fullDateLabel, paymentConfirmLabel } from "@/lib/booking";
 import { createBooking, SlotFullError } from "@/lib/firestore";
-import { notifyAdmin } from "@/lib/notify";
+import { notifyAdmin, notifyCustomer } from "@/lib/notify";
 
 /**
  * RE:TERA HOME — 最終確認（お客様情報入力 → ここ → 完了）
@@ -87,15 +87,32 @@ export default function FinalConfirm() {
           : null,
       });
       set({ bookingNo: newNo });
-      // 管理者へ新着メール通知（補助・失敗しても続行）
+      // メール通知（補助・失敗しても続行）
+      const svcLabel = isReform ? `リフォーム工事 × ${reformRows.length}件` : `${svc.title} × ${qty}${svc.unitLabel}`;
+      const dateLabelText = fullDateLabel(year, month, day!, slot!);
+      const totalText = `${(isReform ? reformIncl : bill.totalIncl).toLocaleString("ja-JP")}円（${isReform ? "税込参考" : "税込"}）`;
+      const addrText = [trimmed.zip && `〒${trimmed.zip}`, trimmed.addr, trimmed.building].filter(Boolean).join(" ");
+      // 管理者へ
       notifyAdmin({
         kind: "予約",
-        title: `${isReform ? `リフォーム工事 × ${reformRows.length}件` : `${svc.title} × ${qty}${svc.unitLabel}`}（${newNo}）`,
+        title: `${svcLabel}（${newNo}）`,
         lines: [
-          `日時：${fullDateLabel(year, month, day!, slot!)}`,
+          `日時：${dateLabelText}`,
           `お客様：${trimmed.name}／${trimmed.tel}`,
-          `住所：${[trimmed.zip && `〒${trimmed.zip}`, trimmed.addr, trimmed.building].filter(Boolean).join(" ")}`,
-          `金額：${(isReform ? reformIncl : bill.totalIncl).toLocaleString("ja-JP")}円（${isReform ? "税込参考" : "税込"}）／${payment}`,
+          `住所：${addrText}`,
+          `金額：${totalText}／${payment}`,
+        ],
+      });
+      // お客様へ確定控え（メール入力があれば）
+      notifyCustomer({
+        to: trimmed.email,
+        title: `${trimmed.name} 様　ご予約を承りました（予約番号：${newNo}）`,
+        lines: [
+          `内容：${svcLabel}`,
+          `日時：${dateLabelText}`,
+          `場所：${addrText}`,
+          `お支払い目安：${totalText}（当日 現金・カード・電子決済）`,
+          `※前日に担当より訪問時間の最終確認をご連絡します。ご不明点はアプリのメッセージへ。`,
         ],
       });
       router.push("/booking/complete");
