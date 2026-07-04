@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Calendar, MapPin, Phone, User, Mail, CreditCard, Wrench,
   MessageSquare, ShieldAlert, ClipboardList, CalendarClock, Home, Camera,
-  ArrowLeft, Send,
+  ArrowLeft, Send, Building2,
 } from "lucide-react";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
@@ -13,8 +13,8 @@ import { SkeletonList, ErrorState } from "@/components/states";
 import { useAuth } from "@/context/AuthContext";
 import { isAdminEmail } from "@/lib/admin";
 import {
-  fetchAllBookings, fetchAllSurveys, subscribeAllMessages, sendMessage,
-  type BookingDoc, type SurveyDoc, type ChatMessage,
+  fetchAllBookings, fetchAllSurveys, fetchAllCorporateInquiries, subscribeAllMessages, sendMessage,
+  type BookingDoc, type SurveyDoc, type CorporateInquiryDoc, type ChatMessage,
 } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
 import { COMPANY } from "@/lib/company";
@@ -57,6 +57,13 @@ const SAMPLE_BK: BookingDoc[] = [
     customer: { name: "春日部 花子", kana: "かすかべ はなこ", tel: "080-2222-3333", email: "hanako@example.com", zip: "344-0067", addr: "埼玉県春日部市中央2-10", building: "", subtel: "", note: "" },
   },
 ];
+const SAMPLE_CORP: CorporateInquiryDoc[] = [
+  {
+    id: "c1", status: "new", createdAtMs: Date.now() - 5000_000,
+    company: "越谷不動産管理 株式会社", name: "管理 一郎", tel: "048-000-0000", email: "kanri@example.co.jp",
+    propertyCount: "21〜50戸／拠点", needs: ["空室クリーニング", "原状回復"], note: "退去のたびにまとめて依頼したい。月末に集中しがち。",
+  },
+];
 const SAMPLE_MSGS: ChatMessage[] = [
   { id: "m1", threadId: "u1", sender: "user", text: "エアコンの予約日を1日ずらせますか？", userName: "越谷 太郎", createdAtMs: Date.now() - 7200_000 },
   { id: "m2", threadId: "u1", sender: "admin", text: "ご連絡ありがとうございます。翌日13:00〜で空きがございます。", userName: "RE:TERA HOME", createdAtMs: Date.now() - 7000_000 },
@@ -81,9 +88,10 @@ function AdminInner() {
   const { user, configured } = useAuth();
   const admin = !configured || isAdminEmail(user?.email);
 
-  const [tab, setTab] = useState<"bookings" | "surveys" | "messages">("bookings");
+  const [tab, setTab] = useState<"bookings" | "surveys" | "corp" | "messages">("bookings");
   const [bk, setBk] = useState<BookingDoc[] | null>(null);
   const [sv, setSv] = useState<SurveyDoc[] | null>(null);
+  const [corp, setCorp] = useState<CorporateInquiryDoc[] | null>(null);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [selThread, setSelThread] = useState<string | null>(null);
   const [reply, setReply] = useState("");
@@ -137,11 +145,11 @@ function AdminInner() {
   };
 
   const load = () => {
-    if (!configured) { setBk(SAMPLE_BK); setSv(SAMPLE_SV); setLoading(false); return; }
+    if (!configured) { setBk(SAMPLE_BK); setSv(SAMPLE_SV); setCorp(SAMPLE_CORP); setLoading(false); return; }
     if (!admin) { setLoading(false); return; }
     setLoading(true); setError(false);
-    Promise.all([fetchAllBookings(), fetchAllSurveys()])
-      .then(([b, s]) => { setBk(b ?? []); setSv(s ?? []); setLoading(false); })
+    Promise.all([fetchAllBookings(), fetchAllSurveys(), fetchAllCorporateInquiries()])
+      .then(([b, s, c]) => { setBk(b ?? []); setSv(s ?? []); setCorp(c ?? []); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   };
   useEffect(load, [configured, user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -174,6 +182,10 @@ function AdminInner() {
               <button className={"rt-adm-stat" + (tab === "surveys" ? " on" : "")} onClick={() => { setTab("surveys"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><ClipboardList size={18} strokeWidth={2.2} /></div>
                 <div><div className="rt-adm-stat-n">{sv?.length ?? "—"}</div><div className="rt-adm-stat-l">見積依頼</div></div>
+              </button>
+              <button className={"rt-adm-stat" + (tab === "corp" ? " on" : "")} onClick={() => { setTab("corp"); setSelThread(null); }}>
+                <div className="rt-adm-stat-ico"><Building2 size={18} strokeWidth={2.2} /></div>
+                <div><div className="rt-adm-stat-n">{corp?.length ?? "—"}</div><div className="rt-adm-stat-l">法人</div></div>
               </button>
               <button className={"rt-adm-stat" + (tab === "messages" ? " on" : "")} onClick={() => { setTab("messages"); setSelThread(null); }}>
                 <div className="rt-adm-stat-ico"><MessageSquare size={18} strokeWidth={2.2} />{unreadThreads > 0 && <span className="rt-adm-dot" />}</div>
@@ -259,7 +271,7 @@ function AdminInner() {
                   })}
                 </div>
               ) : <div className="rt-adm-empty"><Calendar size={26} strokeWidth={1.8} />まだ予約はありません</div>
-            ) : (
+            ) : tab === "surveys" ? (
               (sv && sv.length > 0) ? (
                 <div className="rt-adm-list">
                   {sv.map((s) => {
@@ -290,6 +302,28 @@ function AdminInner() {
                   })}
                 </div>
               ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />まだ見積依頼はありません</div>
+            ) : (
+              (corp && corp.length > 0) ? (
+                <div className="rt-adm-list">
+                  {corp.map((c) => (
+                    <div className="rt-adm-card" key={c.id}>
+                      <div className="rt-adm-head">
+                        <span className="rt-adm-tag t-corp">法人</span>
+                        <span className="rt-adm-recv">受付 {recvLabel(c.createdAtMs)}</span>
+                      </div>
+                      <div className="rt-adm-title">{c.company}</div>
+                      {c.needs.length > 0 && <div className="rt-adm-sub">{c.needs.join("、")}</div>}
+                      <div className="rt-adm-rows">
+                        <Row icon={User}>{c.name} 様</Row>
+                        <Row icon={Phone} href={`tel:${c.tel}`}>{c.tel}</Row>
+                        {c.email && <Row icon={Mail} href={`mailto:${c.email}`}>{c.email}</Row>}
+                        {c.propertyCount && <Row icon={Building2}>規模：{c.propertyCount}</Row>}
+                        {c.note && <Row icon={MessageSquare}>{c.note}</Row>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="rt-adm-empty"><Building2 size={26} strokeWidth={1.8} />まだ法人問い合わせはありません</div>
             )}
           </>
         )}
@@ -313,7 +347,8 @@ const styles = `
 .rt-page-head{padding:16px 2px 14px;}
 .rt-page-title{font-size:24px;font-weight:900;margin:0 0 4px;}
 .rt-page-sub{font-size:12.5px;color:var(--ink-2);font-weight:600;margin:0;}
-.rt-adm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.rt-adm-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+@media(min-width:520px){.rt-adm-stats{grid-template-columns:repeat(4,1fr);}}
 .rt-adm-stat{display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;text-align:center;}
 .rt-adm-stat.on{border-color:var(--red);background:var(--red-soft-2);}
 .rt-adm-stat-ico{position:relative;flex:none;width:36px;height:36px;border-radius:10px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;}
@@ -357,6 +392,7 @@ const styles = `
 .t-done{background:var(--green);}
 .t-cancel{background:var(--ink-3);}
 .t-survey{background:var(--gold);}
+.t-corp{background:var(--navy);}
 .rt-adm-no{font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.02em;}
 .rt-adm-recv{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ink-3);}
 .rt-adm-title{font-size:16px;font-weight:900;line-height:1.3;}

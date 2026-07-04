@@ -109,6 +109,26 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 法人問い合わせ：ゲスト作成可（会社名・担当・電話 必須＋長さ上限）。読み取りは管理者のみ。
+    match /corporateInquiries/{id} {
+      allow create: if request.resource.data.company is string
+                    && request.resource.data.company.size() > 0
+                    && request.resource.data.company.size() <= 100
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 60
+                    && request.resource.data.tel is string
+                    && request.resource.data.tel.size() >= 10
+                    && request.resource.data.tel.size() <= 20
+                    && strOk(request.resource.data.email, 254)
+                    && strOk(request.resource.data.propertyCount, 40)
+                    && strOk(request.resource.data.note, 2000)
+                    && request.resource.data.needs is list
+                    && request.resource.data.needs.size() <= 12;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // ユーザープロフィール：本人のみ読み書き
     match /users/{uid} {
       allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();

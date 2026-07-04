@@ -18,7 +18,7 @@ async function postNotify(payload: Record<string, unknown>): Promise<void> {
 
 /** 管理者（COMPANY.email）へ新着通知 */
 export function notifyAdmin(payload: {
-  kind: "予約" | "見積依頼" | "メッセージ";
+  kind: "予約" | "見積依頼" | "メッセージ" | "法人問い合わせ";
   title: string;
   lines?: string[];
 }): Promise<void> {

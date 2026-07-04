@@ -80,7 +80,7 @@ export default function CorporateLanding() {
         <div className="rt-contact">
           <div className="rt-contact-t">まずはお気軽にご相談ください</div>
           <div className="rt-contact-d">物件数・ご希望をお聞かせいただければ、法人プランをお見積りします。</div>
-          <Link href="/messages" className="rt-contact-btn"><FileText size={18} strokeWidth={2.2} />法人問い合わせフォーム<ChevronRight size={17} strokeWidth={2.6} className="rt-contact-cv" /></Link>
+          <Link href="/corporate/contact" className="rt-contact-btn"><FileText size={18} strokeWidth={2.2} />法人問い合わせフォーム<ChevronRight size={17} strokeWidth={2.6} className="rt-contact-cv" /></Link>
           {COMPANY.tel ? (
             <a href={`tel:${COMPANY.tel}`} className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />電話で相談する</a>
           ) : (

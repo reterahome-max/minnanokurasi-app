@@ -265,6 +265,54 @@ export async function createSurveyRequest(payload: SurveyRequestPayload): Promis
   return { id: ref.id };
 }
 
+/* ───────── 法人問い合わせ ───────── */
+export interface CorporateInquiryPayload {
+  company: string;
+  name: string;
+  tel: string;
+  email: string;
+  propertyCount: string; // 物件数・規模（自由記述 or 選択）
+  needs: string[];       // 依頼内容
+  note: string;
+}
+export interface CorporateInquiryDoc extends CorporateInquiryPayload {
+  id: string;
+  status: string;
+  createdAtMs: number;
+}
+
+/** 法人問い合わせを1件作成（ゲスト可）。未設定時は書き込みせずフロー継続。 */
+export async function createCorporateInquiry(payload: CorporateInquiryPayload): Promise<{ id: string }> {
+  const db = getDb();
+  if (!db) return { id: "local-corp" };
+  const ref = await addDoc(collection(db, "corporateInquiries"), {
+    ...payload,
+    status: "new",
+    createdAt: serverTimestamp(),
+  });
+  return { id: ref.id };
+}
+
+/** 【管理者用】全法人問い合わせを取得（新しい順）。 */
+export async function fetchAllCorporateInquiries(): Promise<CorporateInquiryDoc[] | null> {
+  const db = getDb();
+  if (!db) return null;
+  const snap = await getDocs(collection(db, "corporateInquiries"));
+  const rows: CorporateInquiryDoc[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Record<string, unknown>;
+    const ts = data.createdAt as { toMillis?: () => number } | undefined;
+    rows.push({
+      id: d.id,
+      ...(data as unknown as CorporateInquiryPayload),
+      status: (data.status as string) ?? "new",
+      createdAtMs: ts?.toMillis?.() ?? 0,
+    });
+  });
+  rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return rows;
+}
+
 /* ───────── メッセージ（顧客↔管理者チャット） ─────────
  * 1スレッド = 顧客の uid（threadId）。sender は 'user' | 'admin'。
  * 読み書き可否は firestore.rules（本人スレッド or 管理者）が最終判定。 */
