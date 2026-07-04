@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronRight, Sparkles, Wrench, Calculator, CalendarCheck,
-  Mail, User, Building2, FileText, Bell, LogIn, ShieldCheck, Camera,
+  Mail, User, Building2, FileText, Bell, LogIn, ShieldCheck, Camera, BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { isAdminEmail } from "@/lib/admin";
@@ -17,6 +17,7 @@ const MAIN = [
   { icon: Sparkles, label: "ハウスクリーニング", sub: "エアコン・水回りなどの一覧", href: "/services" },
   { icon: Wrench, label: "リフォーム", sub: "クロス・床・建具・水回り", href: "/reform" },
   { icon: Camera, label: "施工事例・ビフォーアフター", sub: "実際の施工写真を見る", href: "/works" },
+  { icon: BookOpen, label: "初めての方へ", sub: "ご利用ガイド・流れ・料金の仕組み", href: "/guide" },
   { icon: Calculator, label: "料金シミュレーター", sub: "30秒で料金がわかります", href: "/simulator" },
   { icon: CalendarCheck, label: "予約・注文一覧", sub: "ご予約の確認・変更", href: "/orders" },
 ];

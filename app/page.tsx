@@ -331,6 +331,7 @@ export default function RETERAHome() {
 
         {/* ③ カテゴリ */}
         <h2 className="rt-cats-h">カテゴリから選ぶ</h2>
+        <p className="rt-cats-sub">気になる場所から、サービスと料金をすぐに確認できます。</p>
         <div className="rt-cats">
           {CATEGORIES.map((c, i) => {
             const Icon = c.icon;
@@ -432,10 +433,11 @@ export default function RETERAHome() {
             </div>
             <div className="rt-speed-badge"><Truck size={15} strokeWidth={2.2} />スピード対応<br />エリア拡大中！</div>
           </div>
+          <Link href="/guide" className="rt-flow-guide">初めての方へ・ご利用ガイドを見る<ChevronRight size={16} strokeWidth={2.6} /></Link>
         </section>
 
         {/* ⑦ よくあるご質問 */}
-        <section className="rt-faq-sec">
+        <section className="rt-faq-sec" id="faq">
           <h2 className="rt-sec-h">よくあるご質問</h2>
           <p className="rt-sec-sub">お客様からよくいただくご質問をまとめました。</p>
           <div className="rt-faq-search">
@@ -465,6 +467,7 @@ export default function RETERAHome() {
         {/* フッター（会社情報・法務への導線） */}
         <footer className="rt-footer">
           <div className="rt-footer-links">
+            <Link href="/guide">初めての方へ</Link>
             <Link href="/works">施工事例</Link>
             <a href={mapUrl()} target="_blank" rel="noopener noreferrer">地図で見る</a>
             {COMPANY.gbpReviewUrl && <a href={COMPANY.gbpReviewUrl} target="_blank" rel="noopener noreferrer">口コミを書く</a>}
@@ -577,7 +580,8 @@ const styles = `
 .rt-slot-btn{flex:none;display:flex;align-items:center;gap:2px;background:#fff;border:1.5px solid var(--red);color:var(--red);font-size:11.5px;font-weight:800;border-radius:10px;padding:8px 10px;cursor:pointer;line-height:1.25;text-align:left;text-decoration:none;}
 
 /* categories */
-.rt-cats-h{font-size:17px;font-weight:900;letter-spacing:.01em;margin:4px 0 11px;}
+.rt-cats-h{font-size:17px;font-weight:900;letter-spacing:.01em;margin:4px 0 4px;}
+.rt-cats-sub{font-size:12px;color:var(--ink-2);font-weight:600;line-height:1.5;margin:0 0 11px;}
 .rt-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .rt-cats::-webkit-scrollbar{display:none;}
 .rt-cat{flex:none;width:62px;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--ink-2);font-size:11px;font-weight:700;padding:6px 2px;border-bottom:2.5px solid transparent;}
@@ -650,6 +654,8 @@ const styles = `
 .rt-speed-t{font-size:13.5px;font-weight:900;color:var(--red);margin-bottom:3px;line-height:1.3;}
 .rt-speed-d{font-size:11px;color:var(--ink-2);font-weight:600;line-height:1.5;}
 .rt-speed-badge{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px solid var(--red);color:var(--red);border-radius:10px;padding:8px 10px;font-size:10.5px;font-weight:800;text-align:center;line-height:1.3;}
+.rt-flow-guide{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;background:#fff;border:1.5px solid var(--red);border-radius:12px;padding:13px;font-size:13.5px;font-weight:800;color:var(--red);text-decoration:none;}
+.rt-flow-guide:hover{background:var(--red-soft);}
 
 /* faq */
 .rt-faq-sec{margin-bottom:20px;}
