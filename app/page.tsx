@@ -693,8 +693,8 @@ const styles = `
 .rt-cta2{display:grid;grid-template-columns:1fr 1fr;box-shadow:0 -3px 14px rgba(20,28,38,.08);}
 .rt-cta2 a{display:flex;align-items:center;justify-content:center;gap:6px;padding:15px 8px;font-size:15px;font-weight:900;letter-spacing:.02em;text-decoration:none;}
 .rt-cta2 a svg{flex:none;}
-.rt-cta2-tel{background:var(--navy);color:#fff;}
-.rt-cta2-tel:hover{background:var(--navy-2);}
+.rt-cta2-tel{background:#3A5876;color:#fff;}
+.rt-cta2-tel:hover{background:#324c66;}
 .rt-cta2-book{background:var(--red);color:#fff;}
 .rt-cta2-book:hover{background:var(--red-deep);}
 `;
