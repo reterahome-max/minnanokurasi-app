@@ -266,13 +266,20 @@ export async function createSurveyRequest(payload: SurveyRequestPayload): Promis
 }
 
 /* ───────── 法人問い合わせ ───────── */
+export interface CorporateProperty {
+  place: string;   // 物件名・住所
+  service: string; // 希望サービス
+  note: string;    // 戸数・備考
+}
 export interface CorporateInquiryPayload {
   company: string;
   name: string;
   tel: string;
   email: string;
-  propertyCount: string; // 物件数・規模（自由記述 or 選択）
-  needs: string[];       // 依頼内容
+  propertyCount: string;        // 物件数・規模（自由記述 or 選択）
+  plan: string;                 // "spot"（スポット）| "regular"（定期希望）
+  needs: string[];              // 依頼内容
+  properties: CorporateProperty[]; // 複数物件の一括依頼
   note: string;
 }
 export interface CorporateInquiryDoc extends CorporateInquiryPayload {

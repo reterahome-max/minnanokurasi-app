@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowLeft, Building2, FileText, Users, Percent, ClipboardList, Phone, Check, ChevronRight,
+  RefreshCw, CalendarClock, Wallet, Layers,
 } from "lucide-react";
 import Photo from "@/components/Photo";
 import { COMPANY } from "@/lib/company";
@@ -67,6 +68,17 @@ export default function CorporateLanding() {
           </ul>
         </div>
 
+        <div className="rt-sec-h">定期プランのご案内</div>
+        <div className="rt-plan-card">
+          <div className="rt-plan-lead"><RefreshCw size={17} strokeWidth={2.3} />月次・隔月などの定期清掃で、物件の美観と資産価値をキープ。</div>
+          <div className="rt-plan-grid">
+            <div className="rt-plan-item"><CalendarClock size={18} strokeWidth={2.2} /><div><b>スケジュール一括管理</b><span>訪問日を固定化し、都度依頼の手間をゼロに。</span></div></div>
+            <div className="rt-plan-item"><Wallet size={18} strokeWidth={2.2} /><div><b>定期割引・請求書払い</b><span>頻度に応じた法人価格。月締め請求書に対応。</span></div></div>
+            <div className="rt-plan-item"><Layers size={18} strokeWidth={2.2} /><div><b>スポット併用OK</b><span>定期＋退去時のスポット清掃も同じ窓口で。</span></div></div>
+          </div>
+          <div className="rt-plan-note">頻度・戸数によりお見積り。まずはお気軽にご相談ください。</div>
+        </div>
+
         <div className="rt-sec-h">導入の流れ</div>
         <div className="rt-flow">
           {FLOW.map((f, i) => (
@@ -77,15 +89,31 @@ export default function CorporateLanding() {
           ))}
         </div>
 
+        <div className="rt-sec-h">法人メニュー</div>
+        <div className="rt-cmenu">
+          <Link href="/corporate/contact" className="rt-cmenu-row">
+            <div className="rt-cmenu-ico"><Layers size={20} strokeWidth={2.1} /></div>
+            <div className="rt-cmenu-body"><div className="rt-cmenu-t">複数物件をまとめて依頼</div><div className="rt-cmenu-d">物件を何件でも追加して一括でお申し込み</div></div>
+            <ChevronRight size={18} strokeWidth={2.4} className="rt-cmenu-cv" />
+          </Link>
+          <Link href="/corporate/contact" className="rt-cmenu-row">
+            <div className="rt-cmenu-ico"><RefreshCw size={20} strokeWidth={2.1} /></div>
+            <div className="rt-cmenu-body"><div className="rt-cmenu-t">定期プランを相談する</div><div className="rt-cmenu-d">月次・隔月の定期清掃をお見積り</div></div>
+            <ChevronRight size={18} strokeWidth={2.4} className="rt-cmenu-cv" />
+          </Link>
+          {COMPANY.tel && (
+            <a href={`tel:${COMPANY.tel.replace(/[^0-9+]/g, "")}`} className="rt-cmenu-row">
+              <div className="rt-cmenu-ico"><Phone size={20} strokeWidth={2.1} /></div>
+              <div className="rt-cmenu-body"><div className="rt-cmenu-t">電話で相談する</div><div className="rt-cmenu-d">{COMPANY.tel}（{COMPANY.area}）</div></div>
+              <ChevronRight size={18} strokeWidth={2.4} className="rt-cmenu-cv" />
+            </a>
+          )}
+        </div>
+
         <div className="rt-contact">
           <div className="rt-contact-t">まずはお気軽にご相談ください</div>
-          <div className="rt-contact-d">物件数・ご希望をお聞かせいただければ、法人プランをお見積りします。</div>
+          <div className="rt-contact-d">物件数・ご希望をお聞かせいただければ、法人プランをお見積りします（登録不要）。</div>
           <Link href="/corporate/contact" className="rt-contact-btn"><FileText size={18} strokeWidth={2.2} />法人問い合わせフォーム<ChevronRight size={17} strokeWidth={2.6} className="rt-contact-cv" /></Link>
-          {COMPANY.tel ? (
-            <a href={`tel:${COMPANY.tel}`} className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />電話で相談する</a>
-          ) : (
-            <Link href="/messages" className="rt-contact-tel"><Phone size={17} strokeWidth={2.2} />メッセージで相談する</Link>
-          )}
         </div>
 
         <div style={{ height: 24 }} />
@@ -117,6 +145,23 @@ const styles = `
 .rt-usecase-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
 .rt-usecase-list li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;}
 .rt-usecase-list svg{color:#fff;background:var(--red);border-radius:50%;padding:2px;flex:none;}
+.rt-plan-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:22px;box-shadow:var(--shadow);}
+.rt-plan-lead{display:flex;align-items:flex-start;gap:7px;font-size:13px;font-weight:800;line-height:1.5;margin-bottom:13px;}
+.rt-plan-lead svg{color:var(--red);flex:none;margin-top:1px;}
+.rt-plan-grid{display:flex;flex-direction:column;gap:11px;}
+.rt-plan-item{display:flex;align-items:flex-start;gap:10px;}
+.rt-plan-item svg{color:var(--red);flex:none;margin-top:2px;}
+.rt-plan-item b{display:block;font-size:13px;font-weight:800;margin-bottom:2px;}
+.rt-plan-item span{font-size:11.5px;color:var(--ink-2);font-weight:600;line-height:1.5;}
+.rt-plan-note{font-size:11px;color:var(--ink-3);font-weight:600;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);}
+.rt-cmenu{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:22px;box-shadow:var(--shadow);}
+.rt-cmenu-row{display:flex;align-items:center;gap:12px;padding:15px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;}
+.rt-cmenu-row:last-child{border-bottom:none;}
+.rt-cmenu-ico{flex:none;width:42px;height:42px;border-radius:11px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;}
+.rt-cmenu-body{flex:1;min-width:0;}
+.rt-cmenu-t{font-size:14px;font-weight:800;}
+.rt-cmenu-d{font-size:11px;color:var(--ink-3);font-weight:600;margin-top:2px;}
+.rt-cmenu-cv{color:var(--ink-3);flex:none;}
 .rt-flow{display:flex;flex-direction:column;gap:10px;margin-bottom:22px;}
 .rt-flow-row{display:flex;align-items:center;gap:12px;}
 .rt-flow-n{flex:none;width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;}

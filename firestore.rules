@@ -122,9 +122,12 @@ service cloud.firestore {
                     && request.resource.data.tel.size() <= 20
                     && strOk(request.resource.data.email, 254)
                     && strOk(request.resource.data.propertyCount, 40)
+                    && strOk(request.resource.data.plan, 20)
                     && strOk(request.resource.data.note, 2000)
                     && request.resource.data.needs is list
-                    && request.resource.data.needs.size() <= 12;
+                    && request.resource.data.needs.size() <= 12
+                    && request.resource.data.properties is list
+                    && request.resource.data.properties.size() <= 30;
       allow read: if isAdmin();
       allow update, delete: if false;
     }

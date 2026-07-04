@@ -61,7 +61,12 @@ const SAMPLE_CORP: CorporateInquiryDoc[] = [
   {
     id: "c1", status: "new", createdAtMs: Date.now() - 5000_000,
     company: "越谷不動産管理 株式会社", name: "管理 一郎", tel: "048-000-0000", email: "kanri@example.co.jp",
-    propertyCount: "21〜50戸／拠点", needs: ["空室クリーニング", "原状回復"], note: "退去のたびにまとめて依頼したい。月末に集中しがち。",
+    propertyCount: "21〜50戸／拠点", plan: "regular", needs: ["空室クリーニング", "原状回復"],
+    properties: [
+      { place: "サンハイツ越谷 203", service: "空室クリーニング", note: "1R" },
+      { place: "パーク春日部 105", service: "原状回復", note: "2LDK" },
+    ],
+    note: "退去のたびにまとめて依頼したい。月末に集中しがち。",
   },
 ];
 const SAMPLE_MSGS: ChatMessage[] = [
@@ -311,13 +316,16 @@ function AdminInner() {
                         <span className="rt-adm-tag t-corp">法人</span>
                         <span className="rt-adm-recv">受付 {recvLabel(c.createdAtMs)}</span>
                       </div>
-                      <div className="rt-adm-title">{c.company}</div>
+                      <div className="rt-adm-title">{c.company}<span className="rt-adm-plan">{c.plan === "regular" ? "定期希望" : "スポット"}</span></div>
                       {c.needs.length > 0 && <div className="rt-adm-sub">{c.needs.join("、")}</div>}
                       <div className="rt-adm-rows">
                         <Row icon={User}>{c.name} 様</Row>
                         <Row icon={Phone} href={`tel:${c.tel}`}>{c.tel}</Row>
                         {c.email && <Row icon={Mail} href={`mailto:${c.email}`}>{c.email}</Row>}
                         {c.propertyCount && <Row icon={Building2}>規模：{c.propertyCount}</Row>}
+                        {c.properties?.length > 0 && (
+                          <Row icon={MapPin}>対象物件 {c.properties.length}件：{c.properties.map((p) => `${p.place || "（未記入）"}${p.service ? `／${p.service}` : ""}`).join(" ・ ")}</Row>
+                        )}
                         {c.note && <Row icon={MessageSquare}>{c.note}</Row>}
                       </div>
                     </div>
@@ -393,6 +401,7 @@ const styles = `
 .t-cancel{background:var(--ink-3);}
 .t-survey{background:var(--gold);}
 .t-corp{background:var(--navy);}
+.rt-adm-plan{margin-left:8px;font-size:10.5px;font-weight:800;color:var(--navy);background:var(--blue-soft);padding:2px 8px;border-radius:6px;vertical-align:middle;}
 .rt-adm-no{font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.02em;}
 .rt-adm-recv{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ink-3);}
 .rt-adm-title{font-size:16px;font-weight:900;line-height:1.3;}

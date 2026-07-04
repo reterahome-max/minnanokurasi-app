@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, AlertCircle, Building2, ChevronRight, CheckCircle2 } from "lucide-react";
-import { createCorporateInquiry } from "@/lib/firestore";
+import { ArrowLeft, Check, AlertCircle, Building2, ChevronRight, CheckCircle2, Plus, X, RefreshCw, Zap } from "lucide-react";
+import { createCorporateInquiry, type CorporateProperty } from "@/lib/firestore";
 import { notifyAdmin } from "@/lib/notify";
 import { COMPANY } from "@/lib/company";
 
@@ -14,11 +14,15 @@ import { COMPANY } from "@/lib/company";
  */
 const NEEDS = ["空室クリーニング", "定期清掃", "原状回復", "エアコン・水回り清掃", "店舗・オフィス清掃", "その他"];
 const SIZES = ["1〜5戸／拠点", "6〜20戸／拠点", "21〜50戸／拠点", "50戸以上", "未定・要相談"];
+const PROP_SERVICES = ["空室クリーニング", "定期清掃", "原状回復", "エアコン・水回り", "その他"];
+const emptyProp = (): CorporateProperty => ({ place: "", service: "", note: "" });
 
 export default function CorporateContact() {
   const router = useRouter();
   const [f, setF] = useState({ company: "", name: "", tel: "", email: "", propertyCount: "", note: "" });
+  const [plan, setPlan] = useState<"spot" | "regular">("spot");
   const [needs, setNeeds] = useState<string[]>([]);
+  const [props, setProps] = useState<CorporateProperty[]>([emptyProp()]);
   const [err, setErr] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
@@ -26,6 +30,10 @@ export default function CorporateContact() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
   const toggle = (n: string) => setNeeds((p) => (p.includes(n) ? p.filter((x) => x !== n) : [...p, n]));
+  const setProp = (i: number, k: keyof CorporateProperty, v: string) =>
+    setProps((p) => p.map((row, j) => (j === i ? { ...row, [k]: v } : row)));
+  const addProp = () => setProps((p) => (p.length >= 20 ? p : [...p, emptyProp()]));
+  const removeProp = (i: number) => setProps((p) => (p.length <= 1 ? p : p.filter((_, j) => j !== i)));
 
   const submit = async () => {
     if (sending) return;
@@ -36,15 +44,21 @@ export default function CorporateContact() {
     }
     setErr(null);
     setSending(true);
+    // 空行を除いた物件リスト
+    const properties = props
+      .map((p) => ({ place: p.place.trim(), service: p.service.trim(), note: p.note.trim() }))
+      .filter((p) => p.place || p.service || p.note);
+    const planLabel = plan === "regular" ? "定期希望" : "スポット";
     try {
-      await createCorporateInquiry({ ...t, needs });
+      await createCorporateInquiry({ ...t, plan, needs, properties });
       notifyAdmin({
         kind: "法人問い合わせ",
-        title: `${t.company}／${t.name} 様`,
+        title: `${t.company}／${t.name} 様（${planLabel}）`,
         lines: [
           `電話：${t.tel}${t.email ? `　メール：${t.email}` : ""}`,
-          `規模：${t.propertyCount || "未記入"}`,
+          `規模：${t.propertyCount || "未記入"}／区分：${planLabel}`,
           `依頼内容：${needs.join("、") || "未選択"}`,
+          `対象物件：${properties.length ? properties.map((p) => `${p.place}（${p.service || "サービス未指定"}）`).join(" / ") : "未記入"}`,
           `ご相談：${t.note || "（なし）"}`,
         ],
       });
@@ -106,6 +120,18 @@ export default function CorporateContact() {
           </label>
 
           <div className="rt-field">
+            <span className="rt-field-l">ご依頼区分</span>
+            <div className="rt-plan">
+              <button type="button" className={"rt-plan-btn" + (plan === "spot" ? " on" : "")} onClick={() => setPlan("spot")}>
+                <Zap size={16} strokeWidth={2.3} />スポット（都度）
+              </button>
+              <button type="button" className={"rt-plan-btn" + (plan === "regular" ? " on" : "")} onClick={() => setPlan("regular")}>
+                <RefreshCw size={16} strokeWidth={2.3} />定期を希望
+              </button>
+            </div>
+          </div>
+
+          <div className="rt-field">
             <span className="rt-field-l">ご依頼内容（複数選択可）</span>
             <div className="rt-needs">
               {NEEDS.map((n) => {
@@ -116,6 +142,29 @@ export default function CorporateContact() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="rt-field">
+            <span className="rt-field-l">対象物件（複数まとめてOK・任意）</span>
+            <div className="rt-props">
+              {props.map((row, i) => (
+                <div className="rt-prop" key={i}>
+                  <div className="rt-prop-head">
+                    <span className="rt-prop-n">物件 {i + 1}</span>
+                    {props.length > 1 && <button type="button" className="rt-prop-del" onClick={() => removeProp(i)} aria-label="削除"><X size={15} strokeWidth={2.6} /></button>}
+                  </div>
+                  <input className="rt-input" value={row.place} onChange={(e) => setProp(i, "place", e.target.value)} placeholder="物件名・住所（例：◯◯マンション 越谷市…）" />
+                  <div className="rt-select-box">
+                    <select className="rt-select" value={row.service} onChange={(e) => setProp(i, "service", e.target.value)}>
+                      <option value="">希望サービス</option>
+                      {PROP_SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <input className="rt-input" value={row.note} onChange={(e) => setProp(i, "note", e.target.value)} placeholder="戸数・広さ・備考（任意）" />
+                </div>
+              ))}
+              {props.length < 20 && <button type="button" className="rt-prop-add" onClick={addProp}><Plus size={16} strokeWidth={2.6} />物件を追加</button>}
             </div>
           </div>
 
@@ -155,6 +204,16 @@ const styles = `
 .rt-need.on{border-color:var(--red);background:var(--red-soft-2);color:var(--red);}
 .rt-need-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none;}
 .rt-need-check.on{background:var(--red);border-color:var(--red);color:#fff;}
+.rt-plan{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.rt-plan-btn{display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:13px 8px;font-size:13px;font-weight:800;color:var(--ink-2);cursor:pointer;}
+.rt-plan-btn.on{border-color:var(--red);background:var(--red-soft-2);color:var(--red);}
+.rt-plan-btn svg{flex:none;}
+.rt-props{display:flex;flex-direction:column;gap:10px;}
+.rt-prop{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);}
+.rt-prop-head{display:flex;align-items:center;justify-content:space-between;}
+.rt-prop-n{font-size:12px;font-weight:800;color:var(--ink-2);}
+.rt-prop-del{background:none;border:none;color:var(--ink-3);cursor:pointer;display:flex;padding:2px;}
+.rt-prop-add{display:flex;align-items:center;justify-content:center;gap:5px;background:#fff;border:1.5px dashed var(--red);border-radius:11px;padding:12px;font-size:13px;font-weight:800;color:var(--red);cursor:pointer;}
 .rt-submit{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:13px;padding:16px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:var(--shadow);}
 .rt-submit:hover{background:var(--red-deep);}
 .rt-submit:disabled{opacity:.6;cursor:default;}
