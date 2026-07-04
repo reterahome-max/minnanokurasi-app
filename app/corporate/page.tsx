@@ -13,7 +13,10 @@ import BeforeAfter from "@/components/BeforeAfter";
 import BottomNav from "@/components/BottomNav";
 import AudienceTabs from "@/components/AudienceTabs";
 import { COMPANY, mapUrl } from "@/lib/company";
-import { CORP_CATEGORIES, corpMenusByCat, type CorpCatKey } from "@/lib/corporatePricing";
+import {
+  CORP_CATEGORIES, corpMenusByCat, getCorpMenu, lineSubtotal,
+  type CorpCatKey, type CorpMenu,
+} from "@/lib/corporatePricing";
 import { homeStyles } from "../homeStyles";
 
 /**
@@ -24,10 +27,17 @@ import { homeStyles } from "../homeStyles";
  * 下部に法人プラン紹介（メリット／定期プラン／導入の流れ）も残す。
  */
 
-// 空室クリーニング（間取り別・一式）を単価表から取得してミニ概算に使用
-const ROOMS = corpMenusByCat("clean").filter(
-  (m) => m.unit === "一式" && m.name.startsWith("空室クリーニング") && !m.name.includes("戸建て")
-);
+// 概算シミュレーター用：全カテゴリ・全メニューを単価表から供給
+const MENU_GROUPS = CORP_CATEGORIES.map((c) => ({ label: c.label, items: corpMenusByCat(c.key) }));
+const DEFAULT_MENU = (corpMenusByCat("clean").find((m) => m.name.includes("1LDK・2DK")) ?? corpMenusByCat("clean")[0]).id;
+
+const isAreaUnit = (u: string) => u === "㎡" || u === "㎡加算";
+const isFixed = (u: string) => u === "一式" || u === "込み" || u === "標準量込み";
+const isQuote = (u: string) => u === "別途" || u === "対象外" || u === "契約条件" || u === "距離加算";
+// 単位に応じた数量の選択肢（㎡は広め、それ以外は戸数・台数想定）
+const qtyChoices = (m: CorpMenu): number[] =>
+  isFixed(m.unit) || isQuote(m.unit) ? [1] : isAreaUnit(m.unit) ? [10, 20, 30, 50, 80, 100] : [1, 2, 3, 4, 5, 6, 8, 10];
+const defaultQty = (m: CorpMenu): number => (isAreaUnit(m.unit) ? 50 : 1);
 
 const CAT_ICONS: Record<CorpCatKey, typeof Sparkles> = {
   clean: Sparkles, wall: Layers, floor: Grid3x3, fixture: DoorOpen, water: Droplets, electric: Zap, other: Wrench,
@@ -73,14 +83,20 @@ const yen = (n: number) => n.toLocaleString("ja-JP");
 
 export default function CorporateHome() {
   const router = useRouter();
-  const [roomIdx, setRoomIdx] = useState(2); // 既定：1LDK・2DK
-  const [qty, setQty] = useState(1);
+  const [menuId, setMenuId] = useState(DEFAULT_MENU);
+  const [qty, setQty] = useState(1); // 既定：1LDK・2DK は一式なので1
   const [baTab, setBaTab] = useState(0);
   const [cat, setCat] = useState(-1);
 
-  const room = ROOMS[roomIdx];
-  const total = (room?.price ?? 0) * qty;
+  const menu = getCorpMenu(menuId);
+  const sub = menu ? lineSubtotal(menu, qty) : null;
   const ba = BA[baTab];
+
+  const onMenuChange = (id: string) => {
+    setMenuId(id);
+    const m = getCorpMenu(id);
+    if (m) setQty(defaultQty(m));
+  };
 
   return (
     <div className="theme-navy" style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -140,24 +156,35 @@ export default function CorporateHome() {
             </div>
             <div className="rt-sim-total">
               <div className="rt-sim-total-l">概算（税抜）</div>
-              <div className="rt-sim-total-v">{yen(total)}<span>円〜</span></div>
+              <div className="rt-sim-total-v">{sub == null ? <>別途<span>見積</span></> : <>{yen(sub)}<span>円〜</span></>}</div>
             </div>
           </div>
           <div className="rt-selects">
             <label className="rt-select">
-              <span className="rt-select-l">間取りを選ぶ</span>
+              <span className="rt-select-l">メニューを選ぶ</span>
               <div className="rt-select-box">
-                <select value={roomIdx} onChange={(e) => setRoomIdx(Number(e.target.value))}>
-                  {ROOMS.map((r, i) => <option key={r.id} value={i}>{r.name.replace("空室クリーニング ", "")}</option>)}
+                <select value={menuId} onChange={(e) => onMenuChange(e.target.value)}>
+                  {MENU_GROUPS.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.items.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </optgroup>
+                  ))}
                 </select><ChevronDown size={16} />
               </div>
             </label>
             <label className="rt-select">
-              <span className="rt-select-l">戸数</span>
+              <span className="rt-select-l">{menu && isAreaUnit(menu.unit) ? "数量（㎡）" : "数量・台数"}</span>
               <div className="rt-select-box">
-                <select value={qty} onChange={(e) => setQty(Number(e.target.value))}>
-                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}戸</option>)}
-                </select><ChevronDown size={16} />
+                {menu && (isFixed(menu.unit) || isQuote(menu.unit) || sub == null) ? (
+                  <select value={qty} disabled>
+                    <option value={qty}>{isFixed(menu.unit) ? "一式" : "別途見積"}</option>
+                  </select>
+                ) : (
+                  <select value={qty} onChange={(e) => setQty(Number(e.target.value))}>
+                    {menu ? qtyChoices(menu).map((n) => <option key={n} value={n}>{n}{menu.unit}</option>) : <option value={1}>1</option>}
+                  </select>
+                )}
+                <ChevronDown size={16} />
               </div>
             </label>
           </div>
