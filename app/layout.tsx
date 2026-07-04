@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   description:
     "エアコン・水回りのハウスクリーニングからリフォームまで。越谷市・春日部市に地域密着で対応。料金は税込表示・追加料金なし、Webから最短で予約できます。",
   alternates: { canonical: "/" },
+  appleWebApp: {
+    capable: true,
+    title: "RE:TERA HOME",
+    statusBarStyle: "default",
+  },
   verification: {
     google: "qLlZJfrCCRxtXa7aNB7OXxCMKiDzfTLcJS9nISLD4cY",
   },
@@ -45,6 +50,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#C9352E",
   // 拡大操作を妨げない（アクセシビリティ配慮のため maximumScale は指定しない）
 };
 

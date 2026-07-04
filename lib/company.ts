@@ -21,7 +21,14 @@ export const COMPANY = {
   /** 対応エリアの郵便番号プレフィックス（343=越谷, 344=春日部） */
   zipPrefixes: ["343", "344"],
   url: "https://minnanokurasi-app.vercel.app",
+  /** Googleビジネスプロフィール開設後に設定（未設定なら住所検索の地図にフォールバック） */
+  gbpMapUrl: "",
+  gbpReviewUrl: "",
 } as const;
+
+/** 事業所を表示する地図URL（GBPが未設定なら住所検索でフォールバック） */
+export const mapUrl = () =>
+  COMPANY.gbpMapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(COMPANY.address)}`;
 
 export const isServiceArea = (zip: string) => {
   const d = zip.replace(/[-\s]/g, "");

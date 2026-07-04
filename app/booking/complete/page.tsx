@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import {
-  Check, Calendar, MapPin, Clock, MessageCircle, ChevronRight, Home, CalendarCheck,
+  Check, Calendar, MapPin, Clock, MessageCircle, ChevronRight, Home, CalendarCheck, CalendarPlus, Download,
 } from "lucide-react";
 import { useBooking } from "@/context/BookingContext";
 import { getService, calcBill, num } from "@/lib/pricing";
 import { fullDateLabel, bookingNumber } from "@/lib/booking";
+import { COMPANY } from "@/lib/company";
+import { googleCalendarUrl, downloadIcs, type CalEvent } from "@/lib/calendar";
 
 /**
  * RE:TERA HOME — 予約完了
@@ -34,6 +36,17 @@ export default function BookingComplete() {
     { icon: MapPin, label: "場所", value: place },
     { icon: Clock, label: "作業時間の目安", value: isReform ? "工事内容により異なります" : `約60〜90分（${qty}${svc.unitLabel}）` },
   ];
+
+  // カレンダー追加用イベント（日時が確定しているときのみ）
+  const calEvent: CalEvent | null =
+    day != null && slot != null
+      ? {
+          title: `【${COMPANY.name}】${cardTitle}`,
+          year, month, day, slot,
+          details: `ご予約番号：${no}\n${cardTitle}\nお支払い目安：${num(payTotal)}円（税込）\nお問い合わせ：${COMPANY.tel}`,
+          location: [customer.zip && `〒${customer.zip}`, customer.addr, customer.building].filter(Boolean).join(" ") || COMPANY.area,
+        }
+      : null;
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -80,6 +93,17 @@ export default function BookingComplete() {
           <div className="rt-flow-row"><div className="rt-flow-n">2</div><div><div className="rt-flow-t">当日ご訪問・作業</div><div className="rt-flow-d">スタッフが伺い、丁寧に作業します。</div></div></div>
           <div className="rt-flow-row last"><div className="rt-flow-n">3</div><div><div className="rt-flow-t">仕上がり確認・お支払い</div><div className="rt-flow-d">一緒に仕上がりを確認後、お支払い。領収書も発行可能です。</div></div></div>
         </div>
+
+        {/* カレンダーに追加 */}
+        {calEvent && (
+          <div className="rt-cal">
+            <div className="rt-cal-h"><CalendarPlus size={16} strokeWidth={2.3} />カレンダーに追加</div>
+            <div className="rt-cal-btns">
+              <a className="rt-cal-btn" href={googleCalendarUrl(calEvent)} target="_blank" rel="noopener noreferrer"><Calendar size={16} strokeWidth={2.3} />Googleカレンダー</a>
+              <button className="rt-cal-btn" onClick={() => downloadIcs(calEvent, `${no}.ics`)}><Download size={16} strokeWidth={2.3} />その他（.ics）</button>
+            </div>
+          </div>
+        )}
 
         {/* アクション */}
         <button className="rt-act" onClick={() => router.push("/orders")}><CalendarCheck size={19} strokeWidth={2.2} />予約内容を確認する<ChevronRight size={18} strokeWidth={2.6} className="rt-act-cv" /></button>
@@ -129,6 +153,13 @@ const styles = `
 .rt-flow-d{font-size:11.5px;color:var(--ink-2);font-weight:600;line-height:1.55;}
 .rt-act{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;border:none;border-radius:13px;padding:16px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;box-shadow:var(--shadow);position:relative;}
 .rt-act:hover{background:var(--red-deep);}
+.rt-cal{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow);}
+.rt-cal-h{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:900;margin-bottom:11px;}
+.rt-cal-h svg{color:var(--red);}
+.rt-cal-btns{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.rt-cal-btn{display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:12px 8px;font-size:12.5px;font-weight:800;color:var(--ink-2);cursor:pointer;text-decoration:none;}
+.rt-cal-btn:hover{border-color:var(--red);color:var(--red);}
+.rt-cal-btn svg{color:var(--red);flex:none;}
 .rt-act.sub{background:#fff;color:var(--red);border:1.5px solid var(--red);box-shadow:none;}
 .rt-act-cv{position:absolute;right:16px;}
 .rt-home-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;background:none;border:none;color:var(--ink-2);font-size:13px;font-weight:700;cursor:pointer;padding:14px;margin-top:4px;}

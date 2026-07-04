@@ -36,7 +36,7 @@ import { getService, calcBill, serviceGroups, groupForService, num, CATEGORIES a
 import { REFORM_MENU } from "@/lib/reformPricing";
 import { fetchMonthAvailability } from "@/lib/firestore";
 import { today, defaultAvail, shortDateLabel } from "@/lib/booking";
-import { COMPANY, isServiceArea } from "@/lib/company";
+import { COMPANY, isServiceArea, mapUrl } from "@/lib/company";
 
 /**
  * RE:TERA HOME — ホーム画面（ヒーロー〜FAQ〜相談まで／UX順に統合）
@@ -464,6 +464,8 @@ export default function RETERAHome() {
         <footer className="rt-footer">
           <div className="rt-footer-links">
             <Link href="/works">施工事例</Link>
+            <a href={mapUrl()} target="_blank" rel="noopener noreferrer">地図で見る</a>
+            {COMPANY.gbpReviewUrl && <a href={COMPANY.gbpReviewUrl} target="_blank" rel="noopener noreferrer">口コミを書く</a>}
             <Link href="/corporate">法人の方へ</Link>
             <Link href="/legal">利用規約・プライバシー</Link>
             <Link href="/legal">特定商取引法に基づく表記</Link>
