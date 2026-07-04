@@ -15,6 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useBooking } from "@/context/BookingContext";
 import { fetchUserBookings, type BookingDoc } from "@/lib/firestore";
 import { getService, optionsFor, num } from "@/lib/pricing";
+import { reformImageKey } from "@/lib/reformPricing";
 
 /**
  * RE:TERA HOME — もう一度予約（利用履歴からの再予約＋定期プラン提案）
@@ -37,7 +38,7 @@ const toHist = (b: BookingDoc): HistView => {
   const svc = getService(b.serviceId);
   const optNames = optionsFor(b.serviceId).filter((o) => (b.optionIds ?? []).includes(o.id)).map((o) => o.name);
   return {
-    img: isReform ? "cloth" : svc?.img ?? "",
+    img: isReform ? reformImageKey(b.reform!.items[0]?.id ?? "") : svc?.img ?? "",
     title: isReform ? `リフォーム工事 × ${b.reform!.items.length}件` : `${svc?.title ?? b.serviceId} × ${b.qty}${svc?.unitLabel ?? ""}`,
     opt: optNames[0] ?? null,
     last: `前回 ${b.dateLabel?.split("（")[0] ?? ""}`,

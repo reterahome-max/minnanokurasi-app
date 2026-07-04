@@ -14,6 +14,7 @@ import { SkeletonList, Empty, ErrorState } from "@/components/states";
 import { useAuth } from "@/context/AuthContext";
 import { fetchUserBookings, type BookingDoc } from "@/lib/firestore";
 import { getService } from "@/lib/pricing";
+import { reformImageKey } from "@/lib/reformPricing";
 
 /**
  * RE:TERA HOME — 予約・注文一覧
@@ -38,7 +39,7 @@ const toView = (b: BookingDoc): OrderView => {
   const status = b.status === "completed" ? "完了" : b.status === "cancelled" ? "キャンセル" : "予約中";
   return {
     status,
-    img: isReform ? "cloth" : svc?.img ?? "",
+    img: isReform ? reformImageKey(b.reform!.items[0]?.id ?? "") : svc?.img ?? "",
     title: isReform ? `リフォーム工事 × ${b.reform!.items.length}件` : svc?.title ?? b.serviceId,
     date: b.dateLabel,
     addr: [b.customer?.addr, b.customer?.building].filter(Boolean).join(" "),

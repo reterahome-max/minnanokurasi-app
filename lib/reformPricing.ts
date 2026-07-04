@@ -170,6 +170,23 @@ export const reformItemsByCat = (cat: string): ReformItem[] =>
 export const getReformItem = (id: string) => REFORM_ITEMS.find((i) => i.id === id);
 
 /**
+ * リフォーム工事のサムネ画像キー（lib/images に対応）。工事IDから種別を判定。
+ * /orders・/reorder など、実写真ビフォーアフターと同じ画像を一覧に使う。
+ * 判定は id プレフィックス優先（cloth_patch は補修=patch を先に判定）。
+ */
+export function reformImageKey(id: string): string {
+  if (id.startsWith("cloth_patch")) return "patch";
+  if (id.startsWith("cloth")) return "cloth";
+  if (id.startsWith("cf")) return "cf";
+  if (id.startsWith("fl")) return "floor";
+  if (id.startsWith("ft")) return "ftile";
+  if (id.startsWith("net")) return "net";
+  if (id.startsWith("door")) return "door";
+  if (id.startsWith("toilet")) return "toilet";
+  return "cloth";
+}
+
+/**
  * シミュレーターのドロップダウン用・リフォーム代表項目（ナビ専用）。
  * 選択時は /reform/[id]（税抜の概算フロー）へ遷移させる。価格計算はここでは行わない。
  */
