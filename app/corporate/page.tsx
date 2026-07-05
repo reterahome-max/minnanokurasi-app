@@ -373,8 +373,8 @@ const navyExtra = `
 .rt-mini-header{display:flex;align-items:center;gap:9px;padding:14px 2px;}
 .rt-back{background:none;border:none;color:var(--ink);cursor:pointer;display:flex;padding:2px;flex:none;}
 .rt-mini-title{font-size:18px;font-weight:900;}
-/* 法人ヒーロー（支給バナー画像をそのまま表示・トリミングなし） */
-.rt-chero2{margin-bottom:14px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line);}
+/* 法人ヒーロー（支給バナー画像をそのまま表示・トリミングなし／全幅フチなしで最大化） */
+.rt-chero2{margin:0 -14px 16px;overflow:hidden;box-shadow:var(--shadow);}
 .rt-chero2-img{width:100%;height:auto;display:block;}
 .rt-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .rt-merits{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
