@@ -11,7 +11,6 @@ import {
 import NextImage from "next/image";
 import Photo from "@/components/Photo";
 import BeforeAfter from "@/components/BeforeAfter";
-import BottomNav from "@/components/BottomNav";
 import AudienceTabs from "@/components/AudienceTabs";
 import { COMPANY, mapUrl } from "@/lib/company";
 import {
@@ -348,10 +347,10 @@ export default function CorporateHome() {
           <div className="rt-footer-copy">© {new Date().getFullYear()} {COMPANY.name}</div>
         </footer>
 
-        <div style={{ height: 132 }} />
+        <div style={{ height: 76 }} />
       </div>
 
-      {/* 固定フッター */}
+      {/* 固定フッター（お電話／概算のCTAのみ・一般向け下部ナビは非表示） */}
       <div className="rt-bottom">
         <div className="rt-cta2">
           <a href={`tel:${COMPANY.tel.replace(/[^0-9+]/g, "")}`} className="rt-cta2-tel">
@@ -361,7 +360,6 @@ export default function CorporateHome() {
             <Calculator size={19} strokeWidth={2.4} /><span>概算を出す</span><ChevronRight size={18} strokeWidth={2.6} />
           </Link>
         </div>
-        <BottomNav active="home" />
       </div>
     </div>
   );
