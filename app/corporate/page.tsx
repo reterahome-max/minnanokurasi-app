@@ -116,10 +116,10 @@ export default function CorporateHome() {
           <h1 className="rt-sr-only">法人・管理会社様向け｜原状回復工事をまとめてスマートに。空室クリーニング・クロス・床・小修繕まで、RE:TERA HOME が原状回復をまとめてサポートします。</h1>
           <NextImage
             className="rt-chero2-img"
-            src="/images/corp_hero.jpg"
+            src="/images/corp_hero_v2.jpg"
             alt="法人・管理会社様向け 原状回復工事をまとめてスマートに。空室クリーニング・クロス・床・小修繕まで対応。一括対応／写真付き完了報告／越谷市・春日部市対応。"
-            width={1400}
-            height={788}
+            width={1369}
+            height={1149}
             priority
             sizes="(max-width: 640px) 100vw, 640px"
           />
