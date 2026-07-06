@@ -13,6 +13,7 @@ import { getReformItem, quote } from "@/lib/reformPricing";
 import { fullDateLabel, paymentConfirmLabel } from "@/lib/booking";
 import { createBooking, SlotFullError } from "@/lib/firestore";
 import { notifyAdmin, notifyCustomer } from "@/lib/notify";
+import Honeypot from "@/components/Honeypot";
 
 /**
  * RE:TERA HOME — 最終確認（お客様情報入力 → ここ → 完了）
@@ -26,6 +27,7 @@ export default function FinalConfirm() {
   const [agree, setAgree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hp, setHp] = useState(""); // ハニーポット（ボット対策）
 
   // リフォーム予約：金額の出所は lib/reformPricing（税抜）。クリーニングの calcBill とは混ぜない。
   const isReform = reform != null && reform.items.length > 0;
@@ -62,6 +64,7 @@ export default function FinalConfirm() {
 
   const handleConfirm = async () => {
     if (!agree || submitting) return;
+    if (hp) return; // ハニーポットが埋まっている＝ボット。黙って無視
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -205,6 +208,7 @@ export default function FinalConfirm() {
           <div className="rt-agree-t"><Link href="/legal" className="rt-agree-link" onClick={(e) => e.stopPropagation()}>キャンセルポリシー・利用規約</Link>に同意します。前日までのご連絡は無料、当日キャンセルは料金が発生する場合があります。</div>
         </button>
 
+        <Honeypot value={hp} onChange={setHp} />
         {submitError && (
           <div className="rt-form-alert" role="alert"><AlertCircle size={15} strokeWidth={2.4} />{submitError}</div>
         )}

@@ -14,6 +14,7 @@ import {
 import { createRestorationEstimate } from "@/lib/firestore";
 import { notifyAdmin } from "@/lib/notify";
 import { COMPANY } from "@/lib/company";
+import Honeypot from "@/components/Honeypot";
 
 /**
  * RE:TERA HOME — 法人向け 原状回復シミュレーター（仕様書 優先度A）
@@ -41,6 +42,7 @@ export default function RestorationSimulator() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [hp, setHp] = useState(""); // ハニーポット（ボット対策）
 
   // 復元
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function RestorationSimulator() {
 
   const submit = async () => {
     if (sending) return;
+    if (hp) return; // ボットは黙って無視
     const r = { company: req.company.trim(), name: req.name.trim(), tel: req.tel.trim(), email: req.email.trim() };
     if (cart.length === 0) { setErr("施工メニューを1つ以上選択してください。"); return; }
     if (!r.company || !r.name || r.tel.replace(/[^0-9]/g, "").length < 10) { setErr("会社名・ご担当者名・電話番号（10桁以上）は必須です。"); return; }
@@ -252,6 +255,7 @@ export default function RestorationSimulator() {
             <div className="rt-block">
               {err && <div className="rt-err"><AlertCircle size={15} strokeWidth={2.4} />{err}</div>}
               <div className="rt-grid2">
+                <Honeypot value={hp} onChange={setHp} />
                 <label className="rt-f"><span>会社名・屋号 <b>必須</b></span><input className="rt-in" value={req.company} onChange={(e) => setReq({ ...req, company: e.target.value })} placeholder="株式会社◯◯" /></label>
                 <label className="rt-f"><span>ご担当者名 <b>必須</b></span><input className="rt-in" value={req.name} onChange={(e) => setReq({ ...req, name: e.target.value })} placeholder="山田 太郎" /></label>
                 <label className="rt-f"><span>電話番号 <b>必須</b></span><input className="rt-in" type="tel" value={req.tel} onChange={(e) => setReq({ ...req, tel: e.target.value })} placeholder="09012345678" /></label>

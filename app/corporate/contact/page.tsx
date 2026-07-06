@@ -7,6 +7,7 @@ import { ArrowLeft, Check, AlertCircle, Building2, ChevronRight, CheckCircle2, P
 import { createCorporateInquiry, type CorporateProperty } from "@/lib/firestore";
 import { notifyAdmin } from "@/lib/notify";
 import { COMPANY } from "@/lib/company";
+import Honeypot from "@/components/Honeypot";
 
 /**
  * RE:TERA HOME — 法人問い合わせフォーム（ログイン不要）
@@ -26,6 +27,7 @@ export default function CorporateContact() {
   const [err, setErr] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [hp, setHp] = useState(""); // ハニーポット（ボット対策）
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -37,6 +39,7 @@ export default function CorporateContact() {
 
   const submit = async () => {
     if (sending) return;
+    if (hp) return; // ボットは黙って無視
     const t = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v.trim()])) as typeof f;
     if (!t.company || !t.name || t.tel.replace(/[^0-9]/g, "").length < 10) {
       setErr("会社名・ご担当者名・電話番号（10桁以上）は必須です。");
@@ -172,6 +175,7 @@ export default function CorporateContact() {
             <textarea className="rt-input rt-textarea" value={f.note} onChange={set("note")} rows={4} placeholder="物件の所在地、希望時期、頻度、ご予算感などをご記入ください。" /></label>
         </div>
 
+        <Honeypot value={hp} onChange={setHp} />
         <button className="rt-submit" onClick={submit} disabled={sending}>
           {sending ? "送信中…" : "この内容で問い合わせる"}<ChevronRight size={18} strokeWidth={2.6} />
         </button>

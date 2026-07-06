@@ -12,8 +12,41 @@ export const runtime = "nodejs";
 
 const isEmail = (s: unknown) => typeof s === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) && s.length <= 254;
 
+/* ── 悪用対策 ─────────────────────────────────────
+ * 公開エンドポイントのため、①同一オリジンのブラウザ呼び出しのみ許可（Origin検証）、
+ * ②IPごとのレート制限（10通/時・インスタンス内メモリ）を敷く。
+ * サーバレスでインスタンスが分かれても、Origin検証が主防御・レート制限は増幅の抑止。 */
+const ALLOWED_HOSTS = new Set([new URL(COMPANY.url).host, "localhost:3000"]);
+
+function originAllowed(req: NextRequest): boolean {
+  const origin = req.headers.get("origin") ?? req.headers.get("referer");
+  if (!origin) return false; // ブラウザの fetch は必ず Origin を送る。無しは直叩きとみなす
+  try {
+    return ALLOWED_HOSTS.has(new URL(origin).host);
+  } catch {
+    return false;
+  }
+}
+
+const RATE_LIMIT = 10;                 // 通/ウィンドウ
+const RATE_WINDOW_MS = 60 * 60 * 1000; // 1時間
+const hits = new Map<string, number[]>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const arr = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (arr.length >= RATE_LIMIT) { hits.set(ip, arr); return true; }
+  arr.push(now);
+  hits.set(ip, arr);
+  if (hits.size > 5000) hits.clear(); // メモリ暴走防止（雑でよい）
+  return false;
+}
+
 export async function POST(req: NextRequest) {
   if (!mailConfigured()) return NextResponse.json({ ok: false, skipped: "no_smtp_config" });
+  if (!originAllowed(req)) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (rateLimited(ip)) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
 
   let body: { audience?: string; to?: string; kind?: string; title?: string; lines?: string[] };
   try {

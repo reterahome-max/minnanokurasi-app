@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { createSurveyRequest } from "@/lib/firestore";
 import { notifyAdmin } from "@/lib/notify";
 import { lookupAddress } from "@/lib/zip";
+import Honeypot from "@/components/Honeypot";
 
 /**
  * RE:TERA HOME — 現地調査 申し込みフォーム
@@ -44,6 +45,7 @@ export default function SurveyRequest() {
   const [photos, setPhotos] = useState<{ id: number; name: string }[]>([]);
   const [prefs, setPrefs] = useState<Pref[]>([{ date: "", time: "" }]);
   const [submitting, setSubmitting] = useState(false);
+  const [hp, setHp] = useState(""); // ハニーポット（ボット対策）
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -79,6 +81,7 @@ export default function SurveyRequest() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const handleSubmit = async () => {
     if (!ready || submitting) return;
+    if (hp) return; // ボットは黙って無視
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -205,6 +208,7 @@ export default function SurveyRequest() {
           <textarea className="rt-textarea" rows={3} maxLength={1000} value={f.note} onChange={set("note")} placeholder="気になる点、駐車場の有無、ご希望など" />
         </div>
 
+        <Honeypot value={hp} onChange={setHp} />
         {submitError && <div className="rt-form-alert" role="alert"><AlertCircle size={15} strokeWidth={2.4} />{submitError}</div>}
         <div className="rt-hint">送信後、担当より日程調整のご連絡をします。調査・お見積りは無料です。</div>
 
