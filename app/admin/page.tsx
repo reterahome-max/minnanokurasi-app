@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Calendar, MapPin, Phone, User, Mail, CreditCard, Wrench,
   MessageSquare, ShieldAlert, ClipboardList, CalendarClock, Home, Camera,
-  ArrowLeft, Send, Building2,
+  ArrowLeft, Send, Building2, Search as SearchIcon, X,
 } from "lucide-react";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
@@ -118,6 +118,10 @@ function AdminInner() {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(configured);
   const [error, setError] = useState(false);
+  // 絞り込み（検索は氏名・かな・電話・会社・物件・予約番号を横断）
+  const [q, setQ] = useState("");
+  const [bkStatus, setBkStatus] = useState<"all" | "active" | "completed" | "cancelled">("all");
+  const [visN, setVisN] = useState(20); // 一度に表示する件数（「さらに表示」で+20）
 
   // メッセージはリアルタイム購読（管理者のみ）。未設定時はサンプル表示。
   useEffect(() => {
@@ -175,6 +179,38 @@ function AdminInner() {
   };
   useEffect(load, [configured, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // タブ・検索・状態を切り替えたら表示件数をリセット
+  useEffect(() => { setVisN(20); }, [tab, q, bkStatus]);
+
+  // 検索：空白とハイフンを無視した部分一致（電話番号の表記ゆれ対策）
+  const norm = (s: string) => s.toLowerCase().replace(/[-\s（）()]/g, "");
+  const nq = norm(q);
+  const hit = (...fields: (string | undefined | null)[]) =>
+    !nq || fields.some((f) => f && norm(String(f)).includes(nq));
+
+  const bkList = useMemo(() => (bk ?? []).filter((b) => {
+    const st = b.status === "completed" ? "completed" : b.status === "cancelled" ? "cancelled" : "active";
+    if (bkStatus !== "all" && st !== bkStatus) return false;
+    return hit(b.customer?.name, b.customer?.kana, b.customer?.tel, b.customer?.addr, b.bookingNo, b.dateLabel);
+  }), [bk, bkStatus, nq]); // eslint-disable-line react-hooks/exhaustive-deps
+  const svList = useMemo(() => (sv ?? []).filter((s) =>
+    hit(s.customer?.name, s.customer?.tel, s.customer?.addr, s.items?.join(" "))
+  ), [sv, nq]); // eslint-disable-line react-hooks/exhaustive-deps
+  const corpList = useMemo(() => (corp ?? []).filter((c) =>
+    hit(c.company, c.name, c.tel, c.email)
+  ), [corp, nq]); // eslint-disable-line react-hooks/exhaustive-deps
+  const restList = useMemo(() => (rest ?? []).filter((r) =>
+    hit(r.company, r.name, r.tel, r.property?.propertyName, r.property?.roomNumber)
+  ), [rest, nq]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 「さらに表示」ボタン（コンポーネントではなく通常の関数として描画）
+  const moreBtn = (total: number) =>
+    total > visN ? (
+      <button className="rt-adm-more" onClick={() => setVisN((v) => v + 20)}>
+        さらに表示（残り {total - visN} 件）
+      </button>
+    ) : null;
+
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
       <style dangerouslySetInnerHTML={{ __html: styles }} />
@@ -217,6 +253,28 @@ function AdminInner() {
                 <div><div className="rt-adm-stat-n">{threads.length}</div><div className="rt-adm-stat-l">メッセージ</div></div>
               </button>
             </div>
+
+            {tab !== "messages" && (
+              <div className="rt-adm-tools">
+                <div className="rt-adm-search">
+                  <SearchIcon size={16} strokeWidth={2.4} />
+                  <input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="氏名・電話・会社名・物件名で検索"
+                    aria-label="検索"
+                  />
+                  {q && <button className="rt-adm-search-x" onClick={() => setQ("")} aria-label="検索をクリア"><X size={14} strokeWidth={2.6} /></button>}
+                </div>
+                {tab === "bookings" && (
+                  <div className="rt-adm-chips">
+                    {([["all", "すべて"], ["active", "予約中"], ["completed", "完了"], ["cancelled", "キャンセル"]] as const).map(([v, l]) => (
+                      <button key={v} className={"rt-adm-chip" + (bkStatus === v ? " on" : "")} onClick={() => setBkStatus(v)}>{l}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {tab === "messages" ? (
               selThread === null ? (
@@ -262,9 +320,9 @@ function AdminInner() {
             ) : error ? (
               <ErrorState onRetry={load} />
             ) : tab === "bookings" ? (
-              (bk && bk.length > 0) ? (
+              bkList.length > 0 ? (
                 <div className="rt-adm-list">
-                  {bk.map((b) => {
+                  {bkList.slice(0, visN).map((b) => {
                     const isReform = b.reform != null && b.reform.items.length > 0;
                     const title = isReform ? `リフォーム工事 × ${b.reform!.items.length}件` : (getService(b.serviceId)?.title ?? b.serviceId);
                     const st = statusJa(b.status);
@@ -294,12 +352,13 @@ function AdminInner() {
                       </div>
                     );
                   })}
+                  {moreBtn(bkList.length)}
                 </div>
-              ) : <div className="rt-adm-empty"><Calendar size={26} strokeWidth={1.8} />まだ予約はありません</div>
+              ) : <div className="rt-adm-empty"><Calendar size={26} strokeWidth={1.8} />{q || bkStatus !== "all" ? "条件に一致する予約がありません" : "まだ予約はありません"}</div>
             ) : tab === "surveys" ? (
-              (sv && sv.length > 0) ? (
+              svList.length > 0 ? (
                 <div className="rt-adm-list">
-                  {sv.map((s) => {
+                  {svList.slice(0, visN).map((s) => {
                     const c = s.customer;
                     return (
                       <div className="rt-adm-card" key={s.id}>
@@ -325,12 +384,13 @@ function AdminInner() {
                       </div>
                     );
                   })}
+                  {moreBtn(svList.length)}
                 </div>
-              ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />まだ見積依頼はありません</div>
+              ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />{q ? "条件に一致する見積依頼がありません" : "まだ見積依頼はありません"}</div>
             ) : tab === "corp" ? (
-              (corp && corp.length > 0) ? (
+              corpList.length > 0 ? (
                 <div className="rt-adm-list">
-                  {corp.map((c) => (
+                  {corpList.slice(0, visN).map((c) => (
                     <div className="rt-adm-card" key={c.id}>
                       <div className="rt-adm-head">
                         <span className="rt-adm-tag t-corp">法人</span>
@@ -350,12 +410,13 @@ function AdminInner() {
                       </div>
                     </div>
                   ))}
+                  {moreBtn(corpList.length)}
                 </div>
-              ) : <div className="rt-adm-empty"><Building2 size={26} strokeWidth={1.8} />まだ法人問い合わせはありません</div>
+              ) : <div className="rt-adm-empty"><Building2 size={26} strokeWidth={1.8} />{q ? "条件に一致する法人問い合わせがありません" : "まだ法人問い合わせはありません"}</div>
             ) : (
-              (rest && rest.length > 0) ? (
+              restList.length > 0 ? (
                 <div className="rt-adm-list">
-                  {rest.map((r) => (
+                  {restList.slice(0, visN).map((r) => (
                     <div className="rt-adm-card" key={r.id}>
                       <div className="rt-adm-head">
                         <span className="rt-adm-tag t-rest">原状回復</span>
@@ -376,8 +437,9 @@ function AdminInner() {
                       </div>
                     </div>
                   ))}
+                  {moreBtn(restList.length)}
                 </div>
-              ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />まだ原状回復見積はありません</div>
+              ) : <div className="rt-adm-empty"><Wrench size={26} strokeWidth={1.8} />{q ? "条件に一致する原状回復見積がありません" : "まだ原状回復見積はありません"}</div>
             )}
           </>
         )}
@@ -441,6 +503,19 @@ const styles = `
 .rt-adm-list{display:flex;flex-direction:column;gap:13px;}
 .rt-adm-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);}
 .rt-adm-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+/* 検索・絞り込みツールバー */
+.rt-adm-tools{display:flex;flex-direction:column;gap:9px;margin-bottom:13px;}
+.rt-adm-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 12px;height:44px;box-shadow:var(--shadow);}
+.rt-adm-search svg{color:var(--ink-3);flex:none;}
+.rt-adm-search input{flex:1;min-width:0;border:none;outline:none;background:none;font-size:13px;color:var(--ink);font-family:inherit;}
+.rt-adm-search input::placeholder{color:var(--ink-3);}
+.rt-adm-search-x{flex:none;width:26px;height:26px;border-radius:50%;border:none;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.rt-adm-chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+.rt-adm-chips::-webkit-scrollbar{display:none;}
+.rt-adm-chip{flex:none;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--ink-2);cursor:pointer;}
+.rt-adm-chip.on{border-color:var(--red);color:var(--red);background:var(--red-soft);}
+.rt-adm-more{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:13px;font-size:13px;font-weight:800;color:var(--ink-2);cursor:pointer;}
+.rt-adm-more:hover{border-color:var(--red);color:var(--red);}
 .rt-adm-tag{font-size:10.5px;font-weight:800;color:#fff;padding:3px 9px;border-radius:7px;white-space:nowrap;}
 .t-book{background:var(--blue);}
 .t-done{background:var(--green);}

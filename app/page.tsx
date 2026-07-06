@@ -474,6 +474,8 @@ export default function RETERAHome() {
           <div className="rt-footer-links">
             <Link href="/guide">初めての方へ</Link>
             <Link href="/works">施工事例</Link>
+            <Link href="/area/koshigaya">越谷市の方へ</Link>
+            <Link href="/area/kasukabe">春日部市の方へ</Link>
             <a href={mapUrl()} target="_blank" rel="noopener noreferrer">地図で見る</a>
             {COMPANY.gbpReviewUrl && <a href={COMPANY.gbpReviewUrl} target="_blank" rel="noopener noreferrer">口コミを書く</a>}
             <Link href="/corporate">法人の方へ</Link>

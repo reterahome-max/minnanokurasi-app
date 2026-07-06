@@ -14,6 +14,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/reform`, priority: 0.9 },
     { url: `${base}/reform/simulator`, priority: 0.8 },
     { url: `${base}/works`, priority: 0.8 },
+    { url: `${base}/area/koshigaya`, priority: 0.8 },
+    { url: `${base}/area/kasukabe`, priority: 0.8 },
     { url: `${base}/guide`, priority: 0.7 },
     { url: `${base}/corporate`, priority: 0.6 },
     { url: `${base}/corporate/restoration`, priority: 0.6 },

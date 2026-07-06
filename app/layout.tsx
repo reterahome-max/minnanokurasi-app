@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { BookingProvider } from "@/context/BookingContext";
@@ -94,6 +96,10 @@ export default function RootLayout({
             </BookingProvider>
           </UnreadProvider>
         </AuthProvider>
+        {/* 計測：GA4 は NEXT_PUBLIC_GA_ID（G-XXXX）を設定すると有効化。未設定なら何も読み込まない */}
+        {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
+        {/* Vercel Analytics（ダッシュボードで Enable すると計測開始・無料枠あり） */}
+        <Analytics />
       </body>
     </html>
   );
