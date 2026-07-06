@@ -20,7 +20,7 @@ const CLEANING = [
   { before: "ba_hood_before", after: "ba_hood_after", title: "レンジフードクリーニング", desc: "こびりついた油汚れを分解洗浄でリセットしました。", href: "/services/hood", link: "レンジフードクリーニングの料金を見る" },
   { before: "ba_water_before", after: "ba_water_after", title: "洗面所クリーニング", desc: "洗面ボウル・鏡・水栓の水アカと石けんカスを除去しました。", href: "/services/washroom", link: "洗面所クリーニングの料金を見る" },
   { before: "ba_fan_before", after: "ba_fan_after", title: "換気扇クリーニング", desc: "プロペラと枠のホコリ・油汚れを洗浄しました。", href: "/services/fan", link: "換気扇クリーニングの料金を見る" },
-  { before: "ba_vacancy_before", after: "ba_vacancy_after", title: "空室クリーニング", desc: "退去後のお部屋全体を入居前の状態まで清掃しました。", href: "/services/vacancy", link: "空室クリーニングの料金を見る" },
+  { before: "ba_vacancy_before", after: "ba_vacancy_after", title: "空室の原状回復（清掃＋床張り替え）", desc: "退去後のお部屋を清掃し、傷んだ床材の張り替えまで行って入居可能な状態に戻しました。※清掃と内装工事を組み合わせた事例です。", href: "/services/vacancy", link: "空室クリーニングの料金を見る" },
 ];
 
 const REFORM = [

@@ -37,7 +37,8 @@ const BA_MAP: Record<string, { before: string; after: string }> = {
   washroom: { before: "ba_water_before", after: "ba_water_after" },
   hood: { before: "ba_hood_before", after: "ba_hood_after" },
   kitchen: { before: "ba_kitchen_before", after: "ba_kitchen_after" },
-  vacancy: { before: "ba_vacancy_before", after: "ba_vacancy_after" },
+  // vacancy は before/after が別室（清掃に加え床張替えを含む原状回復事例）のため、
+  // 「クリーニングだけでこうなる」と誤解させないようサービス詳細では非掲載（/works に原状回復として掲載）。
   fan: { before: "ba_fan_before", after: "ba_fan_after" },
 };
 

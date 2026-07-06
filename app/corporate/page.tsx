@@ -53,7 +53,7 @@ const POPULAR = [
 
 // 施工事例（原状回復まわりの実写真）
 const BA = [
-  { tab: "空室クリーニング", title: "退去後の空室クリーニング", desc: "水回り・床・建具まで、次の入居に向けてまるごと洗浄。", checks: ["キッチン・浴室・トイレの徹底洗浄", "床のワックス仕上げも対応"], before: "ba_vacancy_before", after: "ba_vacancy_after" },
+  { tab: "原状回復", title: "退去後の原状回復（清掃＋床張り替え）", desc: "清掃と床材の張り替えを組み合わせ、次の入居に向けてまるごと回復。", checks: ["キッチン・浴室・トイレの徹底洗浄", "傷んだ床材の張り替えまで一括対応"], before: "ba_vacancy_before", after: "ba_vacancy_after" },
   { tab: "クロス張替え", title: "クロス（壁紙）張替え", desc: "ヤニ・汚れ・破れをリセット。量産クロスは数量割引も。", checks: ["量産クロス 50㎡以上は 980円/㎡", "アクセントクロスもご相談可"], before: "ba_cloth_before", after: "ba_cloth_after" },
   { tab: "床（CF）", title: "クッションフロア張り替え", desc: "傷・へこみの目立つ床材を一新。原状回復の定番。", checks: ["既存撤去込みで施工", "トイレ・洗面所の部分張替えも"], before: "ba_cf_before", after: "ba_cf_after" },
   { tab: "水回り", title: "水回りクリーニング", desc: "水垢・カビを分解洗浄し、清潔な状態へ回復。", checks: ["浴室・キッチン・洗面所に対応", "エプロン内部・鏡のウロコも"], before: "ba_water_before", after: "ba_water_after" },
@@ -368,6 +368,8 @@ export default function CorporateHome() {
 // 一般ホームのCSS（homeStyles）に、法人紹介ブロック用の追加スタイルとネイビー変数を重ねる。
 const navyExtra = `
 .theme-navy{--red:#33517D;--red-deep:#2a4568;--red-soft:#E9EEF6;--red-soft-2:#F3F6FB;}
+/* 法人は下部ナビ無し＝CTAが最下段。iPhoneのホームバーと重ならないようセーフエリア分を足す */
+.theme-navy .rt-cta2 a{padding-bottom:calc(15px + env(safe-area-inset-bottom));}
 .rt-mini-header{display:flex;align-items:center;gap:9px;padding:14px 2px;}
 .rt-back{background:none;border:none;color:var(--ink);cursor:pointer;display:flex;padding:2px;flex:none;}
 .rt-mini-title{font-size:18px;font-weight:900;}
